@@ -1,0 +1,22 @@
+(call $operations.new_code (i32.const 0))
+{{with .EvalExpr}}
+	{{range .}}(call $operations.write (i32.const {{.}})) {{end}}
+{{end}}
+(block {{.BlockName}}
+		(br_if {{.BlockName}} (i32.eqz (call $operations.evaluate))) (; validate if "int evaluate()" returns code 0 (= int) ;)
+		(call $error.new)
+		(call $error.set (i32.const 0x74_68_65_20))
+		(call $error.set (i32.const 0x65_76_61_6c))
+		(call $error.set (i32.const 0x75_61_74_69))
+		(call $error.set (i32.const 0x6f_6e_20_72))
+		(call $error.set (i32.const 0x65_73_75_6c))
+		(call $error.set (i32.const 0x74_20_6d_75))
+		(call $error.set (i32.const 0x73_74_20_62))
+		(call $error.set (i32.const 0x65_20_61_6e))
+		(call $error.set (i32.const 0x20_69_33_32))
+		(call $error.print)
+		(unreachable)
+)
+{{if (eq .Type "i32")}}(local.set {{.LocalName}} (call $operations.read (i32.const 0)))
+{{else}}(local.set {{.LocalName}} (call $operations.read_{{.Type}} (i32.const 0))){{end}}
+(call $operations.clear)

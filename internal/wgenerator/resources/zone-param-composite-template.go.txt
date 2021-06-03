@@ -1,0 +1,5 @@
+(call $zone.new_copy)
+{{with .ParamName}}
+	{{range .}}(call $zone.copy_name (i32.const {{.}})) {{end}}
+{{end}}
+(call $zone.copy_arg (i32.const {{.ParamIndex}}))

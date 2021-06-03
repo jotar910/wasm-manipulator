@@ -1,0 +1,11 @@
+(call $zone.new (i32.const {{.Type}}))
+{{with .LocalName}}
+	{{range .}}(call $zone.write_name (i32.const {{.}})) {{end}}
+{{end}}
+{{with .LocalKey}}
+	{{range .}}(call $zone.write_key (i32.const {{.}})) {{end}}
+{{end}}
+{{with .LocalValue}}
+	{{range .}}(call $zone.write_value (i32.const {{.}})) {{end}}
+{{end}}
+(call $zone.set)

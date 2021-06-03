@@ -1,0 +1,8 @@
+(call $returns.new_copy)
+{{with .Name}}
+	{{range .}}(call $returns.copy_name (i32.const {{.}})) {{end}}
+{{end}}
+{{with .Key}}
+	{{range .}}(call $returns.copy_key (i32.const {{.}})) {{end}}
+{{end}}
+(call $returns.copy_var)

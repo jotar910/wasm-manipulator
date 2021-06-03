@@ -1,0 +1,10 @@
+(call $operations.new_code (i32.const 0))
+{{with .EvalExpr}}
+	{{range .}}(call $operations.write (i32.const {{.}})) {{end}}
+{{end}}
+(drop (call $operations.evaluate)) (; int evaluate() ;)
+{{if .PushArgs}}(call $args.push){{end}}
+(call $args.new_copy)
+(call $args.copy_index (i32.const {{.ArgIndex}}))
+(call $args.copy_operation (i32.const 0))
+(call $operations.clear)

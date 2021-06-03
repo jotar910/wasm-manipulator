@@ -1,0 +1,2688 @@
+function ui8ToUi32(val) {
+    const res = [];
+    const bytes = function (offset, index) {
+        return val[offset + index] || 0;
+    };
+    for (let i = 0; i < val.length; i += 4) {
+        res.push((bytes(i, 0) << 24) | (bytes(i, 1) << 16) | (bytes(i, 2) << 8) | bytes(i, 3));
+    }
+    return res;
+}
+function ab2str32(buf) {
+    if (!buf) {
+        return '';
+    }
+    if (!Array.isArray(buf)) {
+        throw new Error(`unable to convert buffer to string: expected buffer input but got ${typeof buf}`);
+    }
+    return ab2str8(ui32ToUi8(buf));
+}
+function str2ab32(str) {
+    return ui8ToUi32(str2ab(str));
+}
+function str2ab(str) {
+    var utf8 = [];
+    for (var i = 0; i < str.length; i++) {
+        var charcode = str.charCodeAt(i);
+        if (charcode < 0x80)
+            utf8.push(charcode);
+        else if (charcode < 0x800) {
+            utf8.push(0xc0 | (charcode >> 6), 0x80 | (charcode & 0x3f));
+        }
+        else if (charcode < 0xd800 || charcode >= 0xe000) {
+            utf8.push(0xe0 | (charcode >> 12), 0x80 | ((charcode >> 6) & 0x3f), 0x80 | (charcode & 0x3f));
+        }
+        // surrogate pair
+        else {
+            i++;
+            // UTF-16 encodes 0x10000-0x10FFFF by
+            // subtracting 0x10000 and splitting the
+            // 20 bits of 0x0-0xFFFFF into two halves
+            charcode = 0x10000 + (((charcode & 0x3ff) << 10)
+                | (str.charCodeAt(i) & 0x3ff));
+            utf8.push(0xf0 | (charcode >> 18), 0x80 | ((charcode >> 12) & 0x3f), 0x80 | ((charcode >> 6) & 0x3f), 0x80 | (charcode & 0x3f));
+        }
+    }
+    return utf8;
+}
+function ab2str8(buf) {
+    if (!Array.isArray(buf)) {
+        throw new Error(`unable to convert buffer to string: expected buffer input but got ${typeof buf}`);
+    }
+    return String.fromCharCode.apply(null, new Uint8Array(buf));
+}
+function ui32ToUi8(val) {
+    const res = [];
+    const auxValues = [
+        [0xff000000, 24],
+        [0x00ff0000, 16],
+        [0x0000ff00, 8],
+        [0x000000ff, 0],
+    ];
+    for (const num of val) {
+        for (const auxValue of auxValues) {
+            const aux = (num & auxValue[0]) >> auxValue[1];
+            if (aux === 0) {
+                break;
+            }
+            res.push(aux);
+        }
+    }
+    return res;
+}
+
+/**
+ * @implements {IHooks}
+ */
+class Hooks {
+    /**
+     * @callback HookCallback
+     * @this {*|Jsep} this
+     * @param {Jsep} env
+     * @returns: void
+     */
+    /**
+     * Adds the given callback to the list of callbacks for the given hook.
+     *
+     * The callback will be invoked when the hook it is registered for is run.
+     *
+     * One callback function can be registered to multiple hooks and the same hook multiple times.
+     *
+     * @param {string|object} name The name of the hook, or an object of callbacks keyed by name
+     * @param {HookCallback|boolean} callback The callback function which is given environment variables.
+     * @param {?boolean} [first=false] Will add the hook to the top of the list (defaults to the bottom)
+     * @public
+     */
+    add(name, callback, first) {
+        if (typeof arguments[0] != 'string') {
+            // Multiple hook callbacks, keyed by name
+            for (let name in arguments[0]) {
+                this.add(name, arguments[0][name], arguments[1]);
+            }
+        }
+        else {
+            (Array.isArray(name) ? name : [name]).forEach(function (name) {
+                this[name] = this[name] || [];
+                if (callback) {
+                    this[name][first ? 'unshift' : 'push'](callback);
+                }
+            }, this);
+        }
+    }
+    /**
+     * Runs a hook invoking all registered callbacks with the given environment variables.
+     *
+     * Callbacks will be invoked synchronously and in the order in which they were registered.
+     *
+     * @param {string} name The name of the hook.
+     * @param {Object<string, any>} env The environment variables of the hook passed to all callbacks registered.
+     * @public
+     */
+    run(name, env) {
+        this[name] = this[name] || [];
+        this[name].forEach(function (callback) {
+            callback.call(env && env.context ? env.context : env, env);
+        });
+    }
+}
+/**
+ * @implements {IPlugins}
+ */
+class Plugins {
+    constructor(jsep) {
+        this.jsep = jsep;
+        this.registered = {};
+    }
+    /**
+     * @callback PluginSetup
+     * @this {Jsep} jsep
+     * @returns: void
+     */
+    /**
+     * Adds the given plugin(s) to the registry
+     *
+     * @param {object} plugins
+     * @param {string} plugins.name The name of the plugin
+     * @param {PluginSetup} plugins.init The init function
+     * @public
+     */
+    register(...plugins) {
+        plugins.forEach((plugin) => {
+            if (typeof plugin !== 'object' || !plugin.name || !plugin.init) {
+                throw new Error('Invalid JSEP plugin format');
+            }
+            if (this.registered[plugin.name]) {
+                // already registered. Ignore.
+                return;
+            }
+            plugin.init(this.jsep);
+            this.registered[plugin.name] = plugin;
+        });
+    }
+}
+//     JavaScript Expression Parser (JSEP) 1.0.2
+class Jsep {
+    /**
+     * @returns {string}
+     */
+    static get version() {
+        // To be filled in by the template
+        return '1.0.2';
+    }
+    /**
+     * @returns {string}
+     */
+    static toString() {
+        return 'JavaScript Expression Parser (JSEP) v' + Jsep.version;
+    }
+    ;
+    // ==================== CONFIG ================================
+    /**
+     * @method addUnaryOp
+     * @param {string} op_name The name of the unary op to add
+     * @returns {Jsep}
+     */
+    static addUnaryOp(op_name) {
+        Jsep.max_unop_len = Math.max(op_name.length, Jsep.max_unop_len);
+        Jsep.unary_ops[op_name] = 1;
+        return Jsep;
+    }
+    /**
+     * @method jsep.addBinaryOp
+     * @param {string} op_name The name of the binary op to add
+     * @param {number} precedence The precedence of the binary op (can be a float). Higher number = higher precedence
+     * @returns {Jsep}
+     */
+    static addBinaryOp(op_name, precedence) {
+        Jsep.max_binop_len = Math.max(op_name.length, Jsep.max_binop_len);
+        Jsep.binary_ops[op_name] = precedence;
+        return Jsep;
+    }
+    /**
+     * @method addIdentifierChar
+     * @param {string} char The additional character to treat as a valid part of an identifier
+     * @returns {Jsep}
+     */
+    static addIdentifierChar(char) {
+        Jsep.additional_identifier_chars.add(char);
+        return Jsep;
+    }
+    /**
+     * @method addLiteral
+     * @param {string} literal_name The name of the literal to add
+     * @param {*} literal_value The value of the literal
+     * @returns {Jsep}
+     */
+    static addLiteral(literal_name, literal_value) {
+        Jsep.literals[literal_name] = literal_value;
+        return Jsep;
+    }
+    /**
+     * @method removeUnaryOp
+     * @param {string} op_name The name of the unary op to remove
+     * @returns {Jsep}
+     */
+    static removeUnaryOp(op_name) {
+        delete Jsep.unary_ops[op_name];
+        if (op_name.length === Jsep.max_unop_len) {
+            Jsep.max_unop_len = Jsep.getMaxKeyLen(Jsep.unary_ops);
+        }
+        return Jsep;
+    }
+    /**
+     * @method removeAllUnaryOps
+     * @returns {Jsep}
+     */
+    static removeAllUnaryOps() {
+        Jsep.unary_ops = {};
+        Jsep.max_unop_len = 0;
+        return Jsep;
+    }
+    /**
+     * @method removeIdentifierChar
+     * @param {string} char The additional character to stop treating as a valid part of an identifier
+     * @returns {Jsep}
+     */
+    static removeIdentifierChar(char) {
+        Jsep.additional_identifier_chars.delete(char);
+        return Jsep;
+    }
+    /**
+     * @method removeBinaryOp
+     * @param {string} op_name The name of the binary op to remove
+     * @returns {Jsep}
+     */
+    static removeBinaryOp(op_name) {
+        delete Jsep.binary_ops[op_name];
+        if (op_name.length === Jsep.max_binop_len) {
+            Jsep.max_binop_len = Jsep.getMaxKeyLen(Jsep.binary_ops);
+        }
+        return Jsep;
+    }
+    /**
+     * @method removeAllBinaryOps
+     * @returns {Jsep}
+     */
+    static removeAllBinaryOps() {
+        Jsep.binary_ops = {};
+        Jsep.max_binop_len = 0;
+        return Jsep;
+    }
+    /**
+     * @method removeLiteral
+     * @param {string} literal_name The name of the literal to remove
+     * @returns {Jsep}
+     */
+    static removeLiteral(literal_name) {
+        delete Jsep.literals[literal_name];
+        return Jsep;
+    }
+    /**
+     * @method removeAllLiterals
+     * @returns {Jsep}
+     */
+    static removeAllLiterals() {
+        Jsep.literals = {};
+        return Jsep;
+    }
+    // ==================== END CONFIG ============================
+    /**
+     * @returns {string}
+     */
+    get char() {
+        return this.expr.charAt(this.index);
+    }
+    /**
+     * @returns {number}
+     */
+    get code() {
+        return this.expr.charCodeAt(this.index);
+    }
+    ;
+    /**
+     * @param {string} expr a string with the passed in express
+     * @returns Jsep
+     */
+    constructor(expr) {
+        // `index` stores the character number we are currently at
+        // All of the gobbles below will modify `index` as we move along
+        this.expr = expr;
+        this.index = 0;
+    }
+    /**
+     * static top-level parser
+     * @returns {jsep.Expression}
+     */
+    static parse(expr) {
+        return (new Jsep(expr)).parse();
+    }
+    /**
+     * Get the longest key length of any object
+     * @param {object} obj
+     * @returns {number}
+     */
+    static getMaxKeyLen(obj) {
+        return Math.max(0, ...Object.keys(obj).map(k => k.length));
+    }
+    /**
+     * `ch` is a character code in the next three functions
+     * @param {number} ch
+     * @returns {boolean}
+     */
+    static isDecimalDigit(ch) {
+        return (ch >= 48 && ch <= 57); // 0...9
+    }
+    /**
+     * Returns the precedence of a binary operator or `0` if it isn't a binary operator. Can be float.
+     * @param {string} op_val
+     * @returns {number}
+     */
+    static binaryPrecedence(op_val) {
+        return Jsep.binary_ops[op_val] || 0;
+    }
+    /**
+     * Looks for start of identifier
+     * @param {number} ch
+     * @returns {boolean}
+     */
+    static isIdentifierStart(ch) {
+        return (ch >= 65 && ch <= 90) || // A...Z
+            (ch >= 97 && ch <= 122) || // a...z
+            (ch >= 128 && !Jsep.binary_ops[String.fromCharCode(ch)]) || // any non-ASCII that is not an operator
+            (Jsep.additional_identifier_chars.has(String.fromCharCode(ch))); // additional characters
+    }
+    /**
+     * @param {number} ch
+     * @returns {boolean}
+     */
+    static isIdentifierPart(ch) {
+        return Jsep.isIdentifierStart(ch) || Jsep.isDecimalDigit(ch);
+    }
+    /**
+     * throw error at index of the expression
+     * @param {string} message
+     * @throws
+     */
+    throwError(message) {
+        const error = new Error(message + ' at character ' + this.index);
+        error.index = this.index;
+        error.description = message;
+        throw error;
+    }
+    /**
+     * Run a given hook
+     * @param {string} name
+     * @param {jsep.Expression|false} [node]
+     * @returns {?jsep.Expression}
+     */
+    runHook(name, node) {
+        if (Jsep.hooks[name]) {
+            const env = { context: this, node };
+            Jsep.hooks.run(name, env);
+            return env.node;
+        }
+        return node;
+    }
+    /**
+     * Runs a given hook until one returns a node
+     * @param {string} name
+     * @returns {?jsep.Expression}
+     */
+    searchHook(name) {
+        if (Jsep.hooks[name]) {
+            const env = { context: this };
+            Jsep.hooks[name].find(function (callback) {
+                callback.call(env.context, env);
+                return env.node;
+            });
+            return env.node;
+        }
+    }
+    /**
+     * Push `index` up to the next non-space character
+     */
+    gobbleSpaces() {
+        let ch = this.code;
+        // Whitespace
+        while (ch === Jsep.SPACE_CODE
+            || ch === Jsep.TAB_CODE
+            || ch === Jsep.LF_CODE
+            || ch === Jsep.CR_CODE) {
+            ch = this.expr.charCodeAt(++this.index);
+        }
+        this.runHook('gobble-spaces');
+    }
+    /**
+     * Top-level method to parse all expressions and returns compound or single node
+     * @returns {jsep.Expression}
+     */
+    parse() {
+        this.runHook('before-all');
+        const nodes = this.gobbleExpressions();
+        // If there's only one expression just try returning the expression
+        const node = nodes.length === 1
+            ? nodes[0]
+            : {
+                type: Jsep.COMPOUND,
+                body: nodes
+            };
+        return this.runHook('after-all', node);
+    }
+    /**
+     * top-level parser (but can be reused within as well)
+     * @param {number} [untilICode]
+     * @returns {jsep.Expression[]}
+     */
+    gobbleExpressions(untilICode) {
+        let nodes = [], ch_i, node;
+        while (this.index < this.expr.length) {
+            ch_i = this.code;
+            // Expressions can be separated by semicolons, commas, or just inferred without any
+            // separators
+            if (ch_i === Jsep.SEMCOL_CODE || ch_i === Jsep.COMMA_CODE) {
+                this.index++; // ignore separators
+            }
+            else {
+                // Try to gobble each expression individually
+                if (node = this.gobbleExpression()) {
+                    nodes.push(node);
+                    // If we weren't able to find a binary expression and are out of room, then
+                    // the expression passed in probably has too much
+                }
+                else if (this.index < this.expr.length) {
+                    if (ch_i === untilICode) {
+                        break;
+                    }
+                    this.throwError('Unexpected "' + this.char + '"');
+                }
+            }
+        }
+        return nodes;
+    }
+    /**
+     * The main parsing function.
+     * @returns {?jsep.Expression}
+     */
+    gobbleExpression() {
+        const node = this.searchHook('gobble-expression') || this.gobbleBinaryExpression();
+        this.gobbleSpaces();
+        return this.runHook('after-expression', node);
+    }
+    /**
+     * Search for the operation portion of the string (e.g. `+`, `===`)
+     * Start by taking the longest possible binary operations (3 characters: `===`, `!==`, `>>>`)
+     * and move down from 3 to 2 to 1 character until a matching binary operation is found
+     * then, return that binary operation
+     * @returns {string|boolean}
+     */
+    gobbleBinaryOp() {
+        this.gobbleSpaces();
+        let to_check = this.expr.substr(this.index, Jsep.max_binop_len);
+        let tc_len = to_check.length;
+        while (tc_len > 0) {
+            // Don't accept a binary op when it is an identifier.
+            // Binary ops that start with a identifier-valid character must be followed
+            // by a non identifier-part valid character
+            if (Jsep.binary_ops.hasOwnProperty(to_check) && (!Jsep.isIdentifierStart(this.code) ||
+                (this.index + to_check.length < this.expr.length && !Jsep.isIdentifierPart(this.expr.charCodeAt(this.index + to_check.length))))) {
+                this.index += tc_len;
+                return to_check;
+            }
+            to_check = to_check.substr(0, --tc_len);
+        }
+        return false;
+    }
+    /**
+     * This function is responsible for gobbling an individual expression,
+     * e.g. `1`, `1+2`, `a+(b*2)-Math.sqrt(2)`
+     * @returns {?jsep.BinaryExpression}
+     */
+    gobbleBinaryExpression() {
+        let node, biop, prec, stack, biop_info, left, right, i, cur_biop;
+        // First, try to get the leftmost thing
+        // Then, check to see if there's a binary operator operating on that leftmost thing
+        // Don't gobbleBinaryOp without a left-hand-side
+        left = this.gobbleToken();
+        if (!left) {
+            return left;
+        }
+        biop = this.gobbleBinaryOp();
+        // If there wasn't a binary operator, just return the leftmost node
+        if (!biop) {
+            return left;
+        }
+        // Otherwise, we need to start a stack to properly place the binary operations in their
+        // precedence structure
+        biop_info = { value: biop, prec: Jsep.binaryPrecedence(biop) };
+        right = this.gobbleToken();
+        if (!right) {
+            this.throwError("Expected expression after " + biop);
+        }
+        stack = [left, biop_info, right];
+        // Properly deal with precedence using [recursive descent](http://www.engr.mun.ca/~theo/Misc/exp_parsing.htm)
+        while ((biop = this.gobbleBinaryOp())) {
+            prec = Jsep.binaryPrecedence(biop);
+            if (prec === 0) {
+                this.index -= biop.length;
+                break;
+            }
+            biop_info = { value: biop, prec };
+            cur_biop = biop;
+            // Reduce: make a binary expression from the three topmost entries.
+            while ((stack.length > 2) && (prec <= stack[stack.length - 2].prec)) {
+                right = stack.pop();
+                biop = stack.pop().value;
+                left = stack.pop();
+                node = {
+                    type: Jsep.BINARY_EXP,
+                    operator: biop,
+                    left,
+                    right
+                };
+                stack.push(node);
+            }
+            node = this.gobbleToken();
+            if (!node) {
+                this.throwError("Expected expression after " + cur_biop);
+            }
+            stack.push(biop_info, node);
+        }
+        i = stack.length - 1;
+        node = stack[i];
+        while (i > 1) {
+            node = {
+                type: Jsep.BINARY_EXP,
+                operator: stack[i - 1].value,
+                left: stack[i - 2],
+                right: node
+            };
+            i -= 2;
+        }
+        return node;
+    }
+    /**
+     * An individual part of a binary expression:
+     * e.g. `foo.bar(baz)`, `1`, `"abc"`, `(a % 2)` (because it's in parenthesis)
+     * @returns {boolean|jsep.Expression}
+     */
+    gobbleToken() {
+        let ch, to_check, tc_len, node;
+        this.gobbleSpaces();
+        node = this.searchHook('gobble-token');
+        if (node) {
+            return this.runHook('after-token', node);
+        }
+        ch = this.code;
+        if (Jsep.isDecimalDigit(ch) || ch === Jsep.PERIOD_CODE) {
+            // Char code 46 is a dot `.` which can start off a numeric literal
+            return this.gobbleNumericLiteral();
+        }
+        if (ch === Jsep.SQUOTE_CODE || ch === Jsep.DQUOTE_CODE) {
+            // Single or double quotes
+            node = this.gobbleStringLiteral();
+        }
+        else if (ch === Jsep.OBRACK_CODE) {
+            node = this.gobbleArray();
+        }
+        else {
+            to_check = this.expr.substr(this.index, Jsep.max_unop_len);
+            tc_len = to_check.length;
+            while (tc_len > 0) {
+                // Don't accept an unary op when it is an identifier.
+                // Unary ops that start with a identifier-valid character must be followed
+                // by a non identifier-part valid character
+                if (Jsep.unary_ops.hasOwnProperty(to_check) && (!Jsep.isIdentifierStart(this.code) ||
+                    (this.index + to_check.length < this.expr.length && !Jsep.isIdentifierPart(this.expr.charCodeAt(this.index + to_check.length))))) {
+                    this.index += tc_len;
+                    const argument = this.gobbleToken();
+                    if (!argument) {
+                        this.throwError('missing unaryOp argument');
+                    }
+                    return this.runHook('after-token', {
+                        type: Jsep.UNARY_EXP,
+                        operator: to_check,
+                        argument,
+                        prefix: true
+                    });
+                }
+                to_check = to_check.substr(0, --tc_len);
+            }
+            if (Jsep.isIdentifierStart(ch)) {
+                node = this.gobbleIdentifier();
+                if (Jsep.literals.hasOwnProperty(node.name)) {
+                    node = {
+                        type: Jsep.LITERAL,
+                        value: Jsep.literals[node.name],
+                        raw: node.name,
+                    };
+                }
+                else if (node.name === Jsep.this_str) {
+                    node = { type: Jsep.THIS_EXP };
+                }
+            }
+            else if (ch === Jsep.OPAREN_CODE) { // open parenthesis
+                node = this.gobbleGroup();
+            }
+        }
+        if (!node) {
+            return this.runHook('after-token', false);
+        }
+        node = this.gobbleTokenProperty(node);
+        return this.runHook('after-token', node);
+    }
+    /**
+     * Gobble properties of of identifiers/strings/arrays/groups.
+     * e.g. `foo`, `bar.baz`, `foo['bar'].baz`
+     * It also gobbles function calls:
+     * e.g. `Math.acos(obj.angle)`
+     * @param {jsep.Expression} node
+     * @returns {jsep.Expression}
+     */
+    gobbleTokenProperty(node) {
+        this.gobbleSpaces();
+        let ch = this.code;
+        while (ch === Jsep.PERIOD_CODE || ch === Jsep.OBRACK_CODE || ch === Jsep.OPAREN_CODE || ch === Jsep.QUMARK_CODE) {
+            let optional;
+            if (ch === Jsep.QUMARK_CODE) {
+                if (this.expr.charCodeAt(this.index + 1) !== Jsep.PERIOD_CODE) {
+                    break;
+                }
+                optional = true;
+                this.index += 2;
+                this.gobbleSpaces();
+                ch = this.code;
+            }
+            this.index++;
+            if (ch === Jsep.OBRACK_CODE) {
+                node = {
+                    type: Jsep.MEMBER_EXP,
+                    computed: true,
+                    object: node,
+                    property: this.gobbleExpression()
+                };
+                this.gobbleSpaces();
+                ch = this.code;
+                if (ch !== Jsep.CBRACK_CODE) {
+                    this.throwError('Unclosed [');
+                }
+                this.index++;
+            }
+            else if (ch === Jsep.OPAREN_CODE) {
+                // A function call is being made; gobble all the arguments
+                node = {
+                    type: Jsep.CALL_EXP,
+                    'arguments': this.gobbleArguments(Jsep.CPAREN_CODE),
+                    callee: node
+                };
+            }
+            else if (ch === Jsep.PERIOD_CODE || optional) {
+                if (optional) {
+                    this.index--;
+                }
+                this.gobbleSpaces();
+                node = {
+                    type: Jsep.MEMBER_EXP,
+                    computed: false,
+                    object: node,
+                    property: this.gobbleIdentifier(),
+                };
+            }
+            if (optional) {
+                node.optional = true;
+            } // else leave undefined for compatibility with esprima
+            this.gobbleSpaces();
+            ch = this.code;
+        }
+        return node;
+    }
+    /**
+     * Parse simple numeric literals: `12`, `3.4`, `.5`. Do this by using a string to
+     * keep track of everything in the numeric literal and then calling `parseFloat` on that string
+     * @returns {jsep.Literal}
+     */
+    gobbleNumericLiteral() {
+        let number = '', ch, chCode;
+        while (Jsep.isDecimalDigit(this.code)) {
+            number += this.expr.charAt(this.index++);
+        }
+        if (this.code === Jsep.PERIOD_CODE) { // can start with a decimal marker
+            number += this.expr.charAt(this.index++);
+            while (Jsep.isDecimalDigit(this.code)) {
+                number += this.expr.charAt(this.index++);
+            }
+        }
+        ch = this.char;
+        if (ch === 'e' || ch === 'E') { // exponent marker
+            number += this.expr.charAt(this.index++);
+            ch = this.char;
+            if (ch === '+' || ch === '-') { // exponent sign
+                number += this.expr.charAt(this.index++);
+            }
+            while (Jsep.isDecimalDigit(this.code)) { // exponent itself
+                number += this.expr.charAt(this.index++);
+            }
+            if (!Jsep.isDecimalDigit(this.expr.charCodeAt(this.index - 1))) {
+                this.throwError('Expected exponent (' + number + this.char + ')');
+            }
+        }
+        chCode = this.code;
+        // Check to make sure this isn't a variable name that start with a number (123abc)
+        if (Jsep.isIdentifierStart(chCode)) {
+            this.throwError('Variable names cannot start with a number (' +
+                number + this.char + ')');
+        }
+        else if (chCode === Jsep.PERIOD_CODE || (number.length === 1 && number.charCodeAt(0) === Jsep.PERIOD_CODE)) {
+            this.throwError('Unexpected period');
+        }
+        return {
+            type: Jsep.LITERAL,
+            value: parseFloat(number),
+            raw: number
+        };
+    }
+    /**
+     * Parses a string literal, staring with single or double quotes with basic support for escape codes
+     * e.g. `"hello world"`, `'this is\nJSEP'`
+     * @returns {jsep.Literal}
+     */
+    gobbleStringLiteral() {
+        let str = '';
+        let quote = this.expr.charAt(this.index++);
+        let closed = false;
+        while (this.index < this.expr.length) {
+            let ch = this.expr.charAt(this.index++);
+            if (ch === quote) {
+                closed = true;
+                break;
+            }
+            else if (ch === '\\') {
+                // Check for all of the common escape codes
+                ch = this.expr.charAt(this.index++);
+                switch (ch) {
+                    case 'n':
+                        str += '\n';
+                        break;
+                    case 'r':
+                        str += '\r';
+                        break;
+                    case 't':
+                        str += '\t';
+                        break;
+                    case 'b':
+                        str += '\b';
+                        break;
+                    case 'f':
+                        str += '\f';
+                        break;
+                    case 'v':
+                        str += '\x0B';
+                        break;
+                    default: str += ch;
+                }
+            }
+            else {
+                str += ch;
+            }
+        }
+        if (!closed) {
+            this.throwError('Unclosed quote after "' + str + '"');
+        }
+        return {
+            type: Jsep.LITERAL,
+            value: str,
+            raw: quote + str + quote
+        };
+    }
+    /**
+     * Gobbles only identifiers
+     * e.g.: `foo`, `_value`, `$x1`
+     * Also, this function checks if that identifier is a literal:
+     * (e.g. `true`, `false`, `null`) or `this`
+     * @returns {jsep.Identifier}
+     */
+    gobbleIdentifier() {
+        let ch = this.code, start = this.index;
+        if (Jsep.isIdentifierStart(ch)) {
+            this.index++;
+        }
+        else {
+            this.throwError('Unexpected ' + this.char);
+        }
+        while (this.index < this.expr.length) {
+            ch = this.code;
+            if (Jsep.isIdentifierPart(ch)) {
+                this.index++;
+            }
+            else {
+                break;
+            }
+        }
+        return {
+            type: Jsep.IDENTIFIER,
+            name: this.expr.slice(start, this.index),
+        };
+    }
+    /**
+     * Gobbles a list of arguments within the context of a function call
+     * or array literal. This function also assumes that the opening character
+     * `(` or `[` has already been gobbled, and gobbles expressions and commas
+     * until the terminator character `)` or `]` is encountered.
+     * e.g. `foo(bar, baz)`, `my_func()`, or `[bar, baz]`
+     * @param {number} termination
+     * @returns {jsep.Expression[]}
+     */
+    gobbleArguments(termination) {
+        const args = [];
+        let closed = false;
+        let separator_count = 0;
+        while (this.index < this.expr.length) {
+            this.gobbleSpaces();
+            let ch_i = this.code;
+            if (ch_i === termination) { // done parsing
+                closed = true;
+                this.index++;
+                if (termination === Jsep.CPAREN_CODE && separator_count && separator_count >= args.length) {
+                    this.throwError('Unexpected token ' + String.fromCharCode(termination));
+                }
+                break;
+            }
+            else if (ch_i === Jsep.COMMA_CODE) { // between expressions
+                this.index++;
+                separator_count++;
+                if (separator_count !== args.length) { // missing argument
+                    if (termination === Jsep.CPAREN_CODE) {
+                        this.throwError('Unexpected token ,');
+                    }
+                    else if (termination === Jsep.CBRACK_CODE) {
+                        for (let arg = args.length; arg < separator_count; arg++) {
+                            args.push(null);
+                        }
+                    }
+                }
+            }
+            else if (args.length !== separator_count && separator_count !== 0) {
+                // NOTE: `&& separator_count !== 0` allows for either all commas, or all spaces as arguments
+                this.throwError('Expected comma');
+            }
+            else {
+                const node = this.gobbleExpression();
+                if (!node || node.type === Jsep.COMPOUND) {
+                    this.throwError('Expected comma');
+                }
+                args.push(node);
+            }
+        }
+        if (!closed) {
+            this.throwError('Expected ' + String.fromCharCode(termination));
+        }
+        return args;
+    }
+    /**
+     * Responsible for parsing a group of things within parentheses `()`
+     * that have no identifier in front (so not a function call)
+     * This function assumes that it needs to gobble the opening parenthesis
+     * and then tries to gobble everything within that parenthesis, assuming
+     * that the next thing it should see is the close parenthesis. If not,
+     * then the expression probably doesn't have a `)`
+     * @returns {boolean|jsep.Expression}
+     */
+    gobbleGroup() {
+        this.index++;
+        let nodes = this.gobbleExpressions(Jsep.CPAREN_CODE);
+        if (this.code === Jsep.CPAREN_CODE) {
+            this.index++;
+            if (nodes.length === 1) {
+                return nodes[0];
+            }
+            else if (!nodes.length) {
+                return false;
+            }
+            else {
+                return {
+                    type: Jsep.SEQUENCE_EXP,
+                    expressions: nodes,
+                };
+            }
+        }
+        else {
+            this.throwError('Unclosed (');
+        }
+    }
+    /**
+     * Responsible for parsing Array literals `[1, 2, 3]`
+     * This function assumes that it needs to gobble the opening bracket
+     * and then tries to gobble the expressions as arguments.
+     * @returns {jsep.ArrayExpression}
+     */
+    gobbleArray() {
+        this.index++;
+        return {
+            type: Jsep.ARRAY_EXP,
+            elements: this.gobbleArguments(Jsep.CBRACK_CODE)
+        };
+    }
+}
+// Static fields:
+const hooks = new Hooks();
+Object.assign(Jsep, {
+    hooks,
+    plugins: new Plugins(Jsep),
+    // Node Types
+    // ----------
+    // This is the full set of types that any JSEP node can be.
+    // Store them here to save space when minified
+    COMPOUND: 'Compound',
+    SEQUENCE_EXP: 'SequenceExpression',
+    IDENTIFIER: 'Identifier',
+    MEMBER_EXP: 'MemberExpression',
+    LITERAL: 'Literal',
+    THIS_EXP: 'ThisExpression',
+    CALL_EXP: 'CallExpression',
+    UNARY_EXP: 'UnaryExpression',
+    BINARY_EXP: 'BinaryExpression',
+    ARRAY_EXP: 'ArrayExpression',
+    TAB_CODE: 9,
+    LF_CODE: 10,
+    CR_CODE: 13,
+    SPACE_CODE: 32,
+    PERIOD_CODE: 46,
+    COMMA_CODE: 44,
+    SQUOTE_CODE: 39,
+    DQUOTE_CODE: 34,
+    OPAREN_CODE: 40,
+    CPAREN_CODE: 41,
+    OBRACK_CODE: 91,
+    CBRACK_CODE: 93,
+    QUMARK_CODE: 63,
+    SEMCOL_CODE: 59,
+    COLON_CODE: 58,
+    // Operations
+    // ----------
+    // Use a quickly-accessible map to store all of the unary operators
+    // Values are set to `1` (it really doesn't matter)
+    unary_ops: {
+        '-': 1,
+        '!': 1,
+        '~': 1,
+        '+': 1
+    },
+    // Also use a map for the binary operations but set their values to their
+    // binary precedence for quick reference (higher number = higher precedence)
+    // see [Order of operations](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_Precedence)
+    binary_ops: {
+        '||': 1, '&&': 2, '|': 3, '^': 4, '&': 5,
+        '==': 6, '!=': 6, '===': 6, '!==': 6,
+        '<': 7, '>': 7, '<=': 7, '>=': 7,
+        '<<': 8, '>>': 8, '>>>': 8,
+        '+': 9, '-': 9,
+        '*': 10, '/': 10, '%': 10
+    },
+    // Additional valid identifier chars, apart from a-z, A-Z and 0-9 (except on the starting char)
+    additional_identifier_chars: new Set(['$', '_']),
+    // Literals
+    // ----------
+    // Store the values to return for the various literals we may encounter
+    literals: {
+        'true': true,
+        'false': false,
+        'null': null
+    },
+    // Except for `this`, which is special. This could be changed to something like `'self'` as well
+    this_str: 'this',
+});
+Jsep.max_unop_len = Jsep.getMaxKeyLen(Jsep.unary_ops);
+Jsep.max_binop_len = Jsep.getMaxKeyLen(Jsep.binary_ops);
+// Backward Compatibility:
+const jsep = expr => (new Jsep(expr)).parse();
+const staticMethods = Object.getOwnPropertyNames(Jsep);
+staticMethods
+    .forEach((m) => {
+    if (jsep[m] === undefined && m !== 'prototype') {
+        jsep[m] = Jsep[m];
+    }
+});
+jsep.Jsep = Jsep; // allows for const { Jsep } = require('jsep');
+const CONDITIONAL_EXP = 'ConditionalExpression';
+var ternary = {
+    name: 'ternary',
+    init(jsep) {
+        // Ternary expression: test ? consequent : alternate
+        jsep.hooks.add('after-expression', function gobbleTernary(env) {
+            if (env.node && this.code === jsep.QUMARK_CODE) {
+                this.index++;
+                const test = env.node;
+                const consequent = this.gobbleExpression();
+                if (!consequent) {
+                    this.throwError('Expected expression');
+                }
+                this.gobbleSpaces();
+                if (this.code === jsep.COLON_CODE) {
+                    this.index++;
+                    const alternate = this.gobbleExpression();
+                    if (!alternate) {
+                        this.throwError('Expected expression');
+                    }
+                    env.node = {
+                        type: CONDITIONAL_EXP,
+                        test,
+                        consequent,
+                        alternate,
+                    };
+                }
+                // if binary operator is custom-added (i.e. object plugin), then correct it to a ternary node:
+                // Note: BinaryExpressions can be stacked (similar to 1 + 1 + 1), so we have to collapse the stack
+                // Only do one level at a time so we can unroll as we pop the ternary stack
+                else if (test.operator === ':') {
+                    // this happens when the alternate is a ternary
+                    if (!consequent.right) {
+                        this.throwError('Expected :');
+                    }
+                    const node = findLastBinaryNode(consequent);
+                    test.right = {
+                        type: CONDITIONAL_EXP,
+                        test: test.right,
+                        consequent: node.left,
+                        alternate: node === consequent ? node.right : {
+                            // temporary values because we still have to wait to pop the consequent...
+                            operator: ':',
+                            left: node.right,
+                            right: consequent.right,
+                        },
+                    };
+                    env.node = test;
+                }
+                else if (consequent.operator === ':') {
+                    convertBinaryToConditional(findLastBinaryNode(consequent), test);
+                    env.node = consequent;
+                }
+                else if (consequent.alternate) {
+                    // cleanup the temporary placeholder we made, now that we have the consequent
+                    let alternate = consequent.alternate;
+                    while (alternate.alternate) {
+                        alternate = alternate.alternate;
+                    }
+                    env.node = {
+                        type: CONDITIONAL_EXP,
+                        test,
+                        consequent,
+                        alternate: alternate.right,
+                    };
+                    delete alternate.operator;
+                    delete alternate.right;
+                    Object.assign(alternate, alternate.left);
+                }
+                else {
+                    this.throwError('Expected :');
+                }
+            }
+        });
+        /**
+         * @param {jsep.Expression} node
+         * @returns {jsep.Expression}
+         */
+        function findLastBinaryNode(node) {
+            while (node.left && node.left.operator === ':') {
+                node = node.left;
+            }
+            return node;
+        }
+        /**
+         * @param {jsep.BinaryExpression} node
+         * @param {jsep.Expression} test
+         * @returns {jsep.ConditionalExpression}
+         */
+        function convertBinaryToConditional(node, test) {
+            node.type = CONDITIONAL_EXP;
+            node.test = test;
+            node.consequent = node.left;
+            node.alternate = node.right;
+            delete node.operator;
+            delete node.left;
+            delete node.right;
+        }
+    },
+};
+// Add default plugins:
+jsep.plugins.register(ternary);
+
+class Operations {
+    constructor() {
+        this._values = [];
+        this._results = [];
+        this._processingValueIndex = null;
+    }
+    newVar(valueIndex, typeCode) {
+        if (valueIndex < 0) {
+            return model.logger.error(`creating new input value on Operations: invalid value index ${valueIndex}`);
+        }
+        this._values[valueIndex] = VariableFactory.get(typeCode);
+        this._processingValueIndex = valueIndex;
+        this._results = [];
+    }
+    write(value) {
+        if (!this._assertProcessingValue('setting value on Operations')
+            || !this._values[this._processingValueIndex]) {
+            return;
+        }
+        this._values[this._processingValueIndex].addValue(value);
+    }
+    read(index) {
+        if (!this._results[index]) {
+            model.logger.error(`reading result i32 on Operations: result not found for index ${index}`);
+            return null;
+        }
+        const value = this._results[index].getValue();
+        if (typeof value === 'number') {
+            return value;
+        }
+        if (typeof value === 'boolean') {
+            return value ? 1 : 0;
+        }
+        model.logger.error(`reading result i32 on Operations: result type not valid ${typeof value}`);
+        return null;
+    }
+    getResult(opIndex) {
+        if (opIndex < 0 || opIndex >= this._results.length) {
+            model.logger.error(`Index out of range: index ${opIndex} on operations result with length ${this._results.length}`);
+            return null;
+        }
+        return this._results[opIndex];
+    }
+    clear() {
+        this._values.length = 0;
+        this._results = [];
+    }
+    // must have 1 parameter
+    evaluate() {
+        if (this._values.length !== 1 || !this._values[0]) {
+            model.logger.error("evaluate operation expects 1 parameter");
+            return;
+        }
+        const expression = this._values[0].getValue();
+        const evalResult = this._eval(typeof expression !== 'string' ? JSON.stringify(expression) : expression);
+        const evalResultType = typeof evalResult;
+        let resultCode;
+        if (evalResult === undefined || evalResult === null) {
+            this._results = [new DummyVar(evalResult)];
+            resultCode = 0;
+        }
+        else if (evalResultType === 'boolean') {
+            this._results = [new Primitive(!!evalResult ? 1 : 0)];
+            resultCode = 0;
+        }
+        else if (evalResultType === 'number') {
+            this._results = [new Primitive(evalResult)];
+            resultCode = 0;
+        }
+        else if (evalResultType === 'string') {
+            this._results = [new String$1(str2ab32(evalResult))];
+            resultCode = 1;
+        }
+        else if (evalResultType === 'object') {
+            this._results = [new DummyVar(evalResult)];
+            resultCode = 1;
+        }
+        else {
+            this._results = [new SourceCode(str2ab32(JSON.stringify(evalResult)))];
+            resultCode = 1;
+        }
+        return resultCode;
+    }
+    _eval(expression) {
+        const tree = jsep([...expression.matchAll(/("[^"]+")|(?<id>#\$?[\d\w_]+)/g)].map((match) => match.groups && match.groups['id'] && match.groups['id'] && match.groups['id'].substring(1)).filter((val) => !!val).join('+'));
+        const identifiers = new Map();
+        this._transverseTree(tree, identifiers);
+        expression = expression.replace(/("[^"]+")|(?<id>#\$?[\d\w_]+)/g, function (v, _, g2) {
+            if (v && g2) {
+                return v.substring(1).replace(/^\$(.)*/, "$1");
+            }
+            return v;
+        });
+        const identifiersAr = [];
+        let returnAccum = 0;
+        for (const identifier of Array.from(identifiers.values())) {
+            if (identifier.string() !== 'return_') {
+                const variable = identifier.getVar(model.zone);
+                if (variable === null) {
+                    const error = `invalid expression on evaluate: value for ${identifier.name()} not found`;
+                    model.logger.error(error);
+                    throw new Error(error);
+                }
+                identifiersAr.push(variable);
+                continue;
+            }
+            const variable = model.returns.shiftVar();
+            if (variable === null) {
+                const error = `invalid return on evaluate: return stack is empty`;
+                model.logger.error(error);
+                throw new Error(error);
+            }
+            const key = identifier.string() + returnAccum;
+            identifiersAr.push({ k: key, v: parseVariableValue(variable.getValue()) });
+            expression = expression.replace(/^return_$|[^\w\d_]return_[^\w\d_]/, key);
+            returnAccum++;
+        }
+        return this._looseJsonParse(expression, identifiersAr);
+    }
+    _looseJsonParse(expression, vars) {
+        const varsSet = new Set(['undefined', 'null']);
+        const input = `"use strict";${vars
+            .filter((v) => {
+            if (varsSet.has(v.k)) {
+                return false;
+            }
+            varsSet.add(v.k);
+            return true;
+        })
+            .map((v) => {
+            return ` let ${v.k}=${v.v};`;
+        })
+            .join('')} return (${expression});`;
+        return Function(input)();
+    }
+    _transverseTree(node, identifiers) {
+        const identifier = this._getNodeIdentifier(node, identifiers);
+        if (identifier) {
+            identifiers.set(identifier.string(), identifier);
+        }
+        if (node.left) {
+            this._transverseTree(node.left, identifiers);
+        }
+        if (node.right) {
+            this._transverseTree(node.right, identifiers);
+        }
+    }
+    _getNodeIdentifier(node, identifiers) {
+        switch (node.type) {
+            case 'Identifier':
+                return new Identifier(node.name);
+            case 'MemberExpression':
+                const identifier = this._getNodeIdentifier(node.object, identifiers);
+                if (identifier === null) {
+                    model.logger.error('member expression must be used with an identifier');
+                    return null;
+                }
+                if (node.property.type === 'Literal') {
+                    return new IdentifierMember(identifier, node.property.raw);
+                }
+                if (node.property.type === 'Identifier') {
+                    const member = this._getNodeIdentifier(node.property, identifiers);
+                    if (member === null) {
+                        model.logger.error('member identifier must be valid');
+                        return null;
+                    }
+                    identifiers.set(member.string(), member);
+                    return new IdentifierMember(identifier, member.name());
+                }
+                model.logger.error('member expression index access must be a literal or an identifier');
+                return null;
+            default:
+                return null;
+        }
+    }
+    _assertProcessingValue(source) {
+        if (this._processingValueIndex === null) {
+            model.logger.error(`${source}: processing value not initialized: initialize value first`);
+            return false;
+        }
+        return true;
+    }
+}
+class Identifier {
+    constructor(value) {
+        this.value = value;
+    }
+    name() {
+        return this.value;
+    }
+    string() {
+        return this.value;
+    }
+    getVar(zone) {
+        const variable = zone.getVar(this.value);
+        if (!variable) {
+            return { k: this.value, v: null };
+        }
+        return { k: this.value, v: parseVariableValue(variable.getValue()) };
+    }
+}
+class IdentifierMember {
+    constructor(identifier, value) {
+        this.identifier = identifier;
+        this.value = value;
+    }
+    name() {
+        return this.identifier.name();
+    }
+    string() {
+        return `${this.identifier.string()}[${this.value}]`;
+    }
+    getVar(zone) {
+        const variable = this.identifier.getVar(zone);
+        if (!variable) {
+            return { k: this.value, v: null };
+        }
+        return { k: variable.k, v: parseVariableValue(variable.v) };
+    }
+}
+function parseVariableValue(variableValue) {
+    if (variableValue === null || variableValue === undefined) {
+        return null;
+    }
+    if (typeof variableValue === 'string' || typeof variableValue === 'number') {
+        return variableValue;
+    }
+    if (Array.isArray(variableValue)) {
+        return JSON.stringify(variableValue.map(v => {
+            const val = v.getValue();
+            try {
+                const parsed = parseVariableValue(`${val}`);
+                if (parsed === null) {
+                    return null;
+                }
+                return JSON.parse(parsed.toString());
+            }
+            catch (error) {
+                return val;
+            }
+        }));
+    }
+    if (typeof variableValue === 'object') {
+        return `{${Object.keys(variableValue || {})
+            .map(key => {
+            const value = variableValue[key].getValue();
+            return [
+                `${key.startsWith('"') ? key : `"${key}"`}`,
+                parseVariableValue(value)
+            ];
+        })
+            .map(([key, val]) => `${key}: ${val}`).join(',')}}`;
+    }
+    return JSON.stringify(variableValue);
+}
+
+const variableTypes = new Map();
+var VariableTypeEnum;
+(function (VariableTypeEnum) {
+    VariableTypeEnum["SRC"] = "SRC";
+    VariableTypeEnum["I32"] = "i32";
+    VariableTypeEnum["F32"] = "f32";
+    VariableTypeEnum["F64"] = "f64";
+    VariableTypeEnum["STRING"] = "string";
+    VariableTypeEnum["MAP_I32"] = "map_i32";
+    VariableTypeEnum["MAP_F32"] = "map_f32";
+    VariableTypeEnum["MAP_F64"] = "map_f64";
+    VariableTypeEnum["MAP_STRING"] = "map_string";
+    VariableTypeEnum["ARRAY"] = "array";
+})(VariableTypeEnum || (VariableTypeEnum = {}));
+function splitKey(s) {
+    s = s.replace(/\[(([^\]]+)|\](?=\\))+\]/g, '\|$1'); // convert indexes to properties
+    s = s.replace(/^\|/, ''); // strip a leading dot
+    return s.split('|');
+}
+class VariableFactory {
+    static get(code) {
+        const bitSize = code.toString(2).length;
+        const shiftSize = VariableFactory.shiftSize();
+        const isNotCompleted = bitSize % shiftSize != 0;
+        const firstShift = VariableFactory.nextShift(isNotCompleted ? bitSize + shiftSize - bitSize % shiftSize : bitSize);
+        const varFactory = VariableFactory.getConstructor(code, firstShift);
+        if (!varFactory) {
+            return null;
+        }
+        return new Var(varFactory());
+    }
+    static shiftSize() {
+        return variableTypes.size.toString(2).length;
+    }
+    static getConstructor(code, shift) {
+        const shiftSize = VariableFactory.shiftSize();
+        const rest = (1 << shiftSize) - 1;
+        const varCode = (code >> shift) & rest;
+        switch (varCode) {
+            case getVariableCode(VariableTypeEnum.SRC):
+                return () => new SourceCode();
+            case getVariableCode(VariableTypeEnum.I32):
+            case getVariableCode(VariableTypeEnum.F32):
+            case getVariableCode(VariableTypeEnum.F64):
+                return () => new Primitive();
+            case getVariableCode(VariableTypeEnum.STRING):
+                return () => new String$1();
+            case getVariableCode(VariableTypeEnum.MAP_I32):
+                return () => new MapPrimitive(VariableTypeEnum.I32, VariableFactory.getConstructor(code, VariableFactory.nextShift(shift)));
+            case getVariableCode(VariableTypeEnum.MAP_F32):
+                return () => new MapPrimitive(VariableTypeEnum.F32, VariableFactory.getConstructor(code, VariableFactory.nextShift(shift)));
+            case getVariableCode(VariableTypeEnum.MAP_F64):
+                return () => new MapPrimitive(VariableTypeEnum.F64, VariableFactory.getConstructor(code, VariableFactory.nextShift(shift)));
+            case getVariableCode(VariableTypeEnum.MAP_STRING):
+                return () => new MapString(VariableFactory.getConstructor(code, VariableFactory.nextShift(shift)));
+            case getVariableCode(VariableTypeEnum.ARRAY):
+                return () => new ArrayVar(VariableFactory.getConstructor(code, VariableFactory.nextShift(shift)));
+            default:
+                model.logger.error(`Invalid variable type: code ${code}`);
+                return null;
+        }
+    }
+    static nextShift(shift) {
+        return shift - VariableFactory.shiftSize();
+    }
+}
+class ProcessingVar {
+    constructor(typeCode) {
+        this.typeCode = typeCode;
+        this._name = [];
+        this._key = [];
+        this._value = [];
+    }
+    getName() {
+        return this._name;
+    }
+    getKey() {
+        return this._key;
+    }
+    getValue() {
+        return this._value;
+    }
+    addName(value) {
+        this._name.push(value);
+    }
+    addKey(value) {
+        this._key.push(value);
+    }
+    addValue(value) {
+        this._value.push(value);
+    }
+}
+class Var {
+    constructor(variable) {
+        this.variable = variable;
+        this._name = [];
+    }
+    addName(v) {
+        this._name.push(v);
+    }
+    getName() {
+        if (!this._name.length) {
+            return '';
+        }
+        return ab2str32(this._name);
+    }
+    addKey(k) {
+        this.variable.addKey(k);
+    }
+    getKey() {
+        return this.variable.getKey();
+    }
+    addValue(v) {
+        this.variable.addValue(v);
+    }
+    getValue() {
+        return this.variable.getValue();
+    }
+    getValueByKey(keyAb) {
+        return this.variable.getValueByKey(keyAb);
+    }
+    setValueByKey(keyAb, value) {
+        this.variable.setValueByKey(keyAb, value);
+    }
+    setName(value) {
+        this._name = value;
+    }
+    setValue(value) {
+        this.variable.setValue(value);
+    }
+    setParsedValue(value) {
+        this.variable.setParsedValue(value);
+    }
+}
+class SimpleType {
+    constructor() {
+    }
+    addKey(value) {
+        // Empty by design.
+    }
+    getValueByKey(keyAb) {
+        // Empty by design.
+        return null;
+    }
+    setValueByKey(keyAb, value) {
+        // Empty by design.
+    }
+    getKey() {
+        // Empty by design.
+        return '';
+    }
+}
+class String$1 extends SimpleType {
+    constructor(_value = []) {
+        super();
+        this._value = _value;
+    }
+    getValue() {
+        const value = ab2str32(this._value);
+        if (value.length && value[0] === '"') {
+            return value;
+        }
+        const chars = value.split('');
+        const accum = [];
+        for (let i = 0; i < chars.length; i++) {
+            if (chars[i] == '"' && (i == 0 || chars[i - 1] != '\\')) {
+                accum.push('\\');
+            }
+            accum.push(chars[i]);
+        }
+        return `"${accum.join('')}"`;
+    }
+    newVar() {
+        this.clearVar();
+    }
+    clearVar() {
+        this._value = [];
+    }
+    addValue(value) {
+        this._value.push(value);
+    }
+    setValue(value) {
+        if (typeof value === 'string') {
+            this._value = str2ab32(value);
+        }
+        else if (typeof value === 'number') {
+            this._value = str2ab32(`${value}`);
+        }
+        else {
+            this._value = value;
+        }
+    }
+    setParsedValue(value) {
+        this._value = str2ab32(value);
+    }
+}
+class SourceCode extends SimpleType {
+    constructor(_value = []) {
+        super();
+        this._value = _value;
+    }
+    newVar() {
+        this.clearVar();
+    }
+    clearVar() {
+        this._value = [];
+    }
+    addValue(value) {
+        this._value.push(value);
+    }
+    setValue(value) {
+        if (typeof value === 'string') {
+            this._value = str2ab32(value);
+        }
+        else if (typeof value === 'number') {
+            this._value = str2ab32(`${value}`);
+        }
+        else {
+            this._value = value;
+        }
+    }
+    setParsedValue(value) {
+        this._value = str2ab32(value);
+    }
+    getValue() {
+        const value = ab2str32(this._value);
+        try {
+            // Check if is a valid value.
+            const parsed = JSON.parse(value);
+            if (typeof parsed === 'string') {
+                return value;
+            }
+            if (typeof parsed === 'number') {
+                return parsed;
+            }
+            return parseVariableValue(new DummyVar(parsed).getValue());
+        }
+        catch (e) {
+            // Check if is a valid value.
+            return value;
+        }
+    }
+}
+class Primitive extends SimpleType {
+    constructor(_value = 0) {
+        super();
+        this._value = _value;
+    }
+    newVar() {
+        this.clearVar();
+    }
+    clearVar() {
+        this._value = 0;
+    }
+    addValue(value) {
+        this._value = value;
+    }
+    getValue() {
+        return +this._value.toLocaleString().replace(/,/g, '');
+    }
+    setValue(value) {
+        if (typeof value === 'string') {
+            this._value = +value;
+        }
+        else if (typeof value === 'number') {
+            this._value = value;
+        }
+        else if (value && value.length) {
+            if (value.length === 1) {
+                this._value = value[0];
+            }
+            else {
+                this._value = +str2ab32(`${value}`);
+            }
+        }
+        else {
+            this._value = 0;
+        }
+    }
+    setParsedValue(value) {
+        this._value = +value;
+    }
+}
+class ComposedType {
+    constructor(_baseConstructor) {
+        this._baseConstructor = _baseConstructor;
+        this.base = null;
+    }
+    setBaseConstructor(v) {
+        this._baseConstructor = v;
+        if (this._baseConstructor) {
+            this.base = this._baseConstructor();
+        }
+        else {
+            this.base = null;
+        }
+    }
+    addValue(v) {
+        this.base.addValue(v);
+    }
+    newVar() {
+        this.base = this._baseConstructor();
+    }
+    clearVar() {
+        this.base = null;
+    }
+}
+class MapPrimitive extends ComposedType {
+    constructor(keyType, baseConstructor) {
+        super(baseConstructor);
+        this.keyType = keyType;
+        this._key = null;
+        this._map = new Map();
+    }
+    addKey(v) {
+        this._key = v;
+    }
+    setVar() {
+        if (!this.base) {
+            return model.logger.error('Cannot set variable: not initialized on Primitive Map');
+        }
+        if (this.getKey() === null) {
+            return model.logger.error(`Cannot set variable: primitive map key not defined`);
+        }
+        this._map.set(this.getKey(), this.base);
+    }
+    getValueByKey(keyAb) {
+        const key = VariableFactory.get(getVariableCode(this.keyType));
+        key.setValue(+ab2str32(keyAb));
+        return this._map.get(+key.getValue());
+    }
+    setValueByKey(keyAb, value) {
+        const keys = splitKey('[' + ab2str32(keyAb) + ']');
+        if (!keys.length) {
+            model.logger.error("invalid key while setting value by key on primitive map");
+            return;
+        }
+        const keyVar = VariableFactory.get(getVariableCode(this.keyType));
+        let keyStr = keys[0];
+        try {
+            JSON.parse(keyStr); // validate
+        }
+        catch (error) {
+            const variable = model.zone.getVar(keyStr);
+            if (!variable) {
+                model.logger.error(`Invalid index value ${keyStr} on array: identifier not found`);
+                return null;
+            }
+            keyStr = variable.getValue();
+        }
+        keyVar.setValue(+keyStr);
+        const key = +keyVar.getValue();
+        if (!this._map.has(key)) {
+            this._map.set(key, this._baseConstructor());
+        }
+        if (keys.length === 1) {
+            this._map.get(key).setValue(value);
+            return;
+        }
+        if (keys.length === 2) {
+            this._map.get(key).setValueByKey(str2ab32(keys[1]), value);
+            return;
+        }
+        for (let i = 2; i < keys.length; i++) {
+            keys[i] = '][' + keys[i];
+        }
+        const newKey = keys.slice(1).join('');
+        this._map.get(key).setValueByKey(str2ab32(newKey), value);
+    }
+    setValue(valueAb) {
+        const value = ab2str32(valueAb);
+        let entries = null;
+        try {
+            entries = JSON.parse(value);
+        }
+        catch (e) {
+            return model.logger.error(`setting primitive map value ${value}: invalid value`);
+        }
+        if (!entries) {
+            this._map.clear();
+            return;
+        }
+        if (!Array.isArray(entries)) {
+            return model.logger.error(`setting primitive map value ${value}: value must be an array`);
+        }
+        this.initWithValue(entries);
+    }
+    setParsedValue(value) {
+        this.initWithValue(value);
+    }
+    initWithValue(entries) {
+        this._map.clear();
+        for (const entry of entries) {
+            if (!Array.isArray(entry) || entry.length != 2) {
+                return model.logger.error(`setting primitive map value ${entry}: value entry must be an array of size 2`);
+            }
+            const key = VariableFactory.get(getVariableCode(this.keyType));
+            key.setValue(entry[0]);
+            const variable = this._baseConstructor();
+            if (entry[1]) {
+                variable.setParsedValue(entry[1]);
+            }
+            this._map.set(+key.getValue(), variable);
+        }
+    }
+    getKey() {
+        return this._key;
+    }
+    getValue() {
+        const res = {};
+        for (const [k, v] of Array.from(this._map.entries())) {
+            res[k] = v;
+        }
+        return res;
+    }
+}
+class MapString extends ComposedType {
+    constructor(baseConstructor) {
+        super(baseConstructor);
+        this._key = [];
+        this._map = new Map();
+    }
+    addKey(value) {
+        this._key.push(value);
+    }
+    setVar() {
+        if (!this.base) {
+            return model.logger.error('Cannot set variable: not initialized on String Map');
+        }
+        if (!this.getKey().length) {
+            return model.logger.error(`Cannot set variable: string map key not defined`);
+        }
+        this._map.set(this.getKey(), this.base);
+    }
+    getValueByKey(keyAb) {
+        const key = VariableFactory.get(getVariableCode(VariableTypeEnum.STRING));
+        key.setValue(keyAb);
+        return this._map.get(`${key.getValue()}`);
+    }
+    setValueByKey(keyAb, value) {
+        const keys = splitKey('[' + ab2str32(keyAb) + ']');
+        if (!keys.length) {
+            model.logger.error("invalid key while setting value by key on string map");
+            return;
+        }
+        const keyVar = VariableFactory.get(getVariableCode(VariableTypeEnum.STRING));
+        let keyStr = keys[0];
+        try {
+            JSON.parse(keyStr); // validate
+        }
+        catch (error) {
+            const variable = model.zone.getVar(keyStr);
+            if (!variable) {
+                model.logger.error(`Invalid index value ${keyStr} on array: identifier not found`);
+                return null;
+            }
+            keyStr = variable.getValue();
+        }
+        keyVar.setValue(keyStr);
+        const key = `${keyVar.getValue()}`;
+        if (!this._map.has(key)) {
+            this._map.set(key, this._baseConstructor());
+        }
+        if (keys.length === 1) {
+            this._map.get(key).setValue(value);
+            return;
+        }
+        if (keys.length === 2) {
+            this._map.get(key).setValueByKey(str2ab32(keys[1]), value);
+            return;
+        }
+        for (let i = 2; i < keys.length; i++) {
+            keys[i] = '][' + keys[i];
+        }
+        const newKey = keys.slice(1).join('');
+        this._map.get(key).setValueByKey(str2ab32(newKey), value);
+    }
+    setValue(valueAb) {
+        const value = ab2str32(valueAb);
+        let arr = null;
+        try {
+            arr = JSON.parse(value);
+        }
+        catch (e) {
+            return model.logger.error(`setting string map value ${value}: invalid value`);
+        }
+        if (!arr) {
+            this._map.clear();
+            return;
+        }
+        if (!Array.isArray(arr)) {
+            return model.logger.error(`setting string map value ${value}: value must be an array`);
+        }
+        this.initWithValue(arr);
+    }
+    setParsedValue(value) {
+        this.initWithValue(value);
+    }
+    initWithValue(entries) {
+        this._map.clear();
+        for (const entry of entries) {
+            if (!Array.isArray(entry) || entry.length != 2) {
+                return model.logger.error(`setting string map value: value entry ${entry} must be an array of size 2`);
+            }
+            const key = VariableFactory.get(getVariableCode(VariableTypeEnum.STRING));
+            key.setValue(str2ab32(entry[0]));
+            const variable = this._baseConstructor();
+            if (entry[1]) {
+                variable.setParsedValue(entry[1]);
+            }
+            this._map.set(`${key.getValue()}`, variable);
+        }
+    }
+    getKey() {
+        if (!this._key.length) {
+            model.logger.error(`Key is empty on map`);
+            return '';
+        }
+        return ab2str32(this._key);
+    }
+    getValue() {
+        const res = {};
+        for (const [k, v] of Array.from(this._map.entries())) {
+            res[k] = v;
+        }
+        return res;
+    }
+}
+class ArrayVar extends ComposedType {
+    constructor(baseConstructor) {
+        super(baseConstructor);
+        this._key = -1;
+        this._array = new Array();
+    }
+    addKey(k) {
+        if (!Number.isInteger(k)) {
+            return model.logger.error(`Invalid index value ${k} on array`);
+        }
+        this._key = k;
+    }
+    setVar() {
+        if (!this.base) {
+            return model.logger.error('Cannot set variable: not initialized on Array');
+        }
+        if (this.getKey() < 0) {
+            return model.logger.error(`Cannot set variable: invalid index ${this.getKey()}`);
+        }
+        this._array[this.getKey()] = this.base;
+    }
+    getValueByKey(keyAb) {
+        const key = ab2str32(keyAb);
+        if (isNaN(+key) || isNaN(parseFloat(key)) || +key % 1 != 0) {
+            model.logger.error(`Invalid index value ${key} on array`);
+            return null;
+        }
+        const index = Math.floor(+key);
+        if (index < 0 || index >= this._array.length) {
+            model.logger.error(`Index out of range: index ${index} on array with length ${this._array.length}`);
+            return null;
+        }
+        return this._array[index];
+    }
+    setValueByKey(keyAb, value) {
+        const keys = splitKey('[' + ab2str32(keyAb) + ']');
+        if (!keys.length) {
+            model.logger.error("invalid key while setting value by key on array");
+            return;
+        }
+        let index = keys[0];
+        try {
+            JSON.parse(index); // validate
+        }
+        catch (error) {
+            const variable = model.zone.getVar(index);
+            if (!variable) {
+                model.logger.error(`Invalid index value ${index} on array: identifier not found`);
+                return null;
+            }
+            index = variable.getValue();
+        }
+        if (isNaN(+index) || isNaN(parseFloat(index)) || +index % 1 != 0) {
+            model.logger.error(`Invalid index value ${index} on array: index is not an integer`);
+            return null;
+        }
+        if (!this._array[+index]) {
+            this._array[+index] = this._baseConstructor();
+        }
+        if (keys.length === 1) {
+            this._array[+index].setValue(value);
+            return;
+        }
+        if (keys.length === 2) {
+            this._array[+index].setValueByKey(str2ab32(keys[1]), value);
+            return;
+        }
+        for (let i = 2; i < keys.length; i++) {
+            keys[i] = '][' + keys[i];
+        }
+        const newKey = keys.slice(1).join('');
+        this._array[+index].setValueByKey(str2ab32(newKey), value);
+    }
+    setValue(valueAb) {
+        const value = ab2str32(valueAb);
+        let arr = null;
+        try {
+            arr = JSON.parse(value);
+        }
+        catch (e) {
+            return model.logger.error(`setting array value ${value}: invalid value`);
+        }
+        if (!arr) {
+            this._array.length = 0;
+            return;
+        }
+        this.initWithValue(arr);
+    }
+    setParsedValue(value) {
+        this.initWithValue(value);
+    }
+    initWithValue(entries) {
+        if (!Array.isArray(entries)) {
+            return model.logger.error(`setting array value ${entries}: value must be an array`);
+        }
+        this._array.length = 0;
+        for (const entry of entries) {
+            const variable = this._baseConstructor();
+            if (entry) {
+                variable.setParsedValue(entry);
+            }
+            this._array.push(variable);
+        }
+    }
+    getKey() {
+        return this._key;
+    }
+    getValue() {
+        return this._array;
+    }
+}
+class DummyVar {
+    constructor(value = null) {
+        this._value = null;
+        this.setValue(value);
+    }
+    getName() {
+        // Empty by design.
+        return null;
+    }
+    getKey() {
+        return null;
+    }
+    getValue() {
+        return this._value;
+    }
+    addName() {
+        // Empty by design.
+    }
+    addKey() {
+        // Empty by design.
+    }
+    addValue() {
+        // Empty by design.
+    }
+    getValueByKey(keyAb) {
+        // Empty by design.
+        return null;
+    }
+    setValueByKey(keyAb, value) {
+        // Empty by design.
+    }
+    setValue(value) {
+        if (value === null || value === undefined) {
+            this._value = value;
+            return;
+        }
+        if (Array.isArray(value)) {
+            const varTypeCode = getVarTypeCode(value);
+            const array = VariableFactory.get(varTypeCode);
+            array.variable.initWithValue(value);
+            this._value = array.getValue();
+            return;
+        }
+        if (typeof value === 'object') {
+            const varTypeCode = getVarTypeCode(value);
+            const mapValue = [];
+            for (const entry of Object.entries(value)) {
+                mapValue.push(entry);
+            }
+            const map = VariableFactory.get(varTypeCode);
+            map.variable.initWithValue(mapValue);
+            this._value = map.getValue();
+            return;
+        }
+        const string = new String$1();
+        string.setValue(value);
+        this._value = string.getValue();
+    }
+    setParsedValue(value) {
+        this.setValue(value);
+    }
+}
+function getVarTypeCode(variable) {
+    const types = [];
+    getVarType(variable, types);
+    const typesLen = types.length;
+    const shiftSize = VariableFactory.shiftSize();
+    let code = 0;
+    let threshold = typesLen - 1;
+    for (const type of types) {
+        code |= getVariableCode(type) << (shiftSize * threshold);
+        threshold--;
+    }
+    return code;
+}
+function getVarType(variable, types) {
+    if (Array.isArray(variable)) {
+        const nonNullValues = variable.filter((value) => value !== null && value !== undefined);
+        types.push(VariableTypeEnum.ARRAY);
+        if (nonNullValues.length) {
+            getVarType(nonNullValues[0], types);
+        }
+        else {
+            types.push(VariableTypeEnum.F64);
+        }
+        return types;
+    }
+    if (typeof variable === 'object') {
+        const keys = Object.keys(variable);
+        if (!keys.length) {
+            types.push(VariableTypeEnum.MAP_STRING);
+            types.push(VariableTypeEnum.F64);
+            return types;
+        }
+        const keyTypes = [];
+        getVarType(keys[0], keyTypes);
+        const keyType = keyTypes[0];
+        switch (keyType) {
+            case VariableTypeEnum.I32:
+                types.push(VariableTypeEnum.MAP_I32);
+            case VariableTypeEnum.F32:
+                types.push(VariableTypeEnum.MAP_F32);
+            case VariableTypeEnum.F64:
+                types.push(VariableTypeEnum.MAP_F64);
+            default:
+                types.push(VariableTypeEnum.MAP_STRING);
+        }
+        const values = Object.values(variable);
+        getVarType(values[0], types);
+        return types;
+    }
+    if (typeof variable !== 'number') {
+        types.push(VariableTypeEnum.STRING);
+        return types;
+    }
+    if (!Number.isInteger(variable) || variable > Number.MAX_SAFE_INTEGER) {
+        types.push(VariableTypeEnum.F64);
+        return types;
+    }
+    types.push(VariableTypeEnum.I32);
+    return types;
+}
+function getVariableCode(variable) {
+    return variableTypes.get(variable) || 0;
+}
+function setupVariableTypes() {
+    const types = [
+        VariableTypeEnum.SRC,
+        VariableTypeEnum.I32,
+        VariableTypeEnum.F32,
+        VariableTypeEnum.F64,
+        VariableTypeEnum.STRING,
+        VariableTypeEnum.MAP_I32,
+        VariableTypeEnum.MAP_F32,
+        VariableTypeEnum.MAP_F64,
+        VariableTypeEnum.MAP_STRING,
+        VariableTypeEnum.ARRAY,
+    ];
+    for (let i = 0; i < types.length; ++i) {
+        variableTypes.set(types[i], i + 1);
+    }
+}
+
+class Args {
+    constructor(parent = null) {
+        this.parent = parent;
+        this._args = [];
+        this._processingArgIndex = null;
+        this._processingCopy = null;
+    }
+    newVar(argIndex, typeCode) {
+        if (argIndex < 0) {
+            return model.logger.error(`creating new variable on Args: invalid argument index ${argIndex}`);
+        }
+        this._args[argIndex] = VariableFactory.get(typeCode);
+        this._processingArgIndex = argIndex;
+    }
+    write(value) {
+        if (!this._assertProcessingArg('setting value on Args')) {
+            return;
+        }
+        this._args[this._processingArgIndex].addValue(value);
+    }
+    read(argIndex) {
+        if (argIndex < 0 || argIndex >= this._args.length) {
+            model.logger.error(`Index out of range: index ${argIndex} on args with length ${this._args.length}`);
+            return null;
+        }
+        if (!this._args[argIndex]) {
+            return null;
+        }
+        return this._args[argIndex].getValue();
+    }
+    getArg(argIndex) {
+        const res = this._args[argIndex];
+        if (!res) {
+            model.logger.error(`getting argument on Args: invalid argument index ${argIndex}`);
+            return null;
+        }
+        return res;
+    }
+    newCopy() {
+        this._processingCopy = -1;
+    }
+    copyIndex(argIndex) {
+        if (!this._assertProcessingCopy('setting copy name on Args')) {
+            return;
+        }
+        if (argIndex < 0) {
+            return model.logger.error(`setting argument index to copy on Args: invalid argument index ${argIndex}`);
+        }
+        this._processingCopy = argIndex;
+    }
+    copyOperation(opIndex) {
+        if (!this._assertValidProcessingCopy('copying argument variable on Args')) {
+            return;
+        }
+        const opValue = model.operations.getResult(opIndex);
+        if (opValue === null) {
+            return model.logger.error(`could not copy operation result at index ${opIndex} to argument at index ${this._processingCopy}`);
+        }
+        this._args[this._processingCopy] = opValue;
+        this._processingCopy = null;
+    }
+    length() {
+        return this._args.length;
+    }
+    addArg(typeCode, value, index) {
+        const variable = VariableFactory.get(typeCode);
+        variable.setValue(value);
+        this._args[index] = variable;
+    }
+    _assertProcessingArg(source) {
+        if (this._processingArgIndex === null) {
+            model.logger.error(`${source}: processing argument not initialized: initialize argument first`);
+            return false;
+        }
+        return true;
+    }
+    _assertProcessingCopy(source) {
+        if (this._processingCopy === null) {
+            model.logger.error(`${source}: processing copy not initialized: initialize copy action first`);
+            return false;
+        }
+        return true;
+    }
+    _assertValidProcessingCopy(source) {
+        if (this._processingCopy === null) {
+            model.logger.error(`${source}: processing copy not initialized: initialize copy action first`);
+            return false;
+        }
+        if (this._processingCopy === -1) {
+            model.logger.error(`${source}: processing copy name is empty`);
+            return false;
+        }
+        return true;
+    }
+}
+
+class Error$1 {
+    constructor() {
+        this.error = [];
+    }
+    new() {
+        this.error = [];
+    }
+    set(v) {
+        this.error.push(v);
+    }
+    print() {
+        if (!this.error.length) {
+            return model.logger.error("unknown error");
+        }
+        model.logger.error(ab2str32(this.error));
+    }
+}
+
+class Logger {
+    error(message) {
+        console.error('[ERROR]', message);
+    }
+}
+
+class Zone {
+    constructor(parent = null) {
+        this.parent = parent;
+        this._processingVar = null;
+        this._processingCopy = null;
+        this.vars = new Map();
+    }
+    getVar(key) {
+        for (let z = this; z != null; z = z.parent) {
+            if (z.vars.has(key)) {
+                return z.vars.get(key);
+            }
+        }
+        return null;
+    }
+    newVar(typeCode) {
+        this._processingVar = new ProcessingVar(typeCode);
+    }
+    setName(value) {
+        if (!this._assertProcessingVar('setting name on Zone')) {
+            return;
+        }
+        this._processingVar.addName(value);
+    }
+    setKey(value) {
+        if (!this._assertProcessingVar('setting key on Zone')) {
+            return;
+        }
+        this._processingVar.addKey(value);
+    }
+    setValue(value) {
+        if (!this._assertProcessingVar('setting value on Zone')) {
+            return;
+        }
+        this._processingVar.addValue(value);
+    }
+    setLocalVar() {
+        if (!this._assertProcessingVar('setting local variable on Zone')) {
+            return;
+        }
+        this._setLocalVar(this._processingVar);
+        this._processingVar = null;
+    }
+    setGlobalVar() {
+        if (!this._assertProcessingVar('setting global variable on Zone')) {
+            return;
+        }
+        let z = this;
+        while (z.parent != null) {
+            z = z.parent;
+        }
+        z._setLocalVar(this._processingVar);
+        this._processingVar = null;
+    }
+    newCopy() {
+        this._processingCopy = new ProcessingVar(null);
+    }
+    copyName(value) {
+        if (!this._assertProcessingCopy('setting copy name on Zone')) {
+            return;
+        }
+        this._processingCopy.addName(value);
+    }
+    copyKey(value) {
+        if (!this._assertValidProcessingCopy('setting copy key on Zone')) {
+            return;
+        }
+        this._processingCopy.addKey(value);
+    }
+    copyArg(argIndex) {
+        if (!this._assertValidProcessingCopy('copying argument variable on Zone')) {
+            return;
+        }
+        const zoneName = ab2str32(this._processingCopy.getName());
+        const zoneKeyAb = this._processingCopy.getKey().length ? this._processingCopy.getKey() : null;
+        const argValue = model.args.getArg(argIndex);
+        if (!argValue) {
+            return model.logger.error(`could not copy argument at index ${argIndex} to zone variable named ${zoneName}`);
+        }
+        const curValue = this.vars.get(zoneName);
+        if (!curValue) {
+            this._processingCopy = null;
+            return this.vars.set(zoneName, argValue);
+        }
+        const parsedValue = parseVariableValue(argValue.getValue());
+        const variableValue = parsedValue && JSON.parse(parsedValue.toString());
+        if (!zoneKeyAb) {
+            this._processingCopy = null;
+            return curValue.setParsedValue(variableValue);
+        }
+        curValue.setValueByKey(zoneKeyAb, argValue.getValue());
+        this._processingCopy = null;
+    }
+    copyOperation(opIndex) {
+        if (!this._assertValidProcessingCopy('copying operation variable on Zone')) {
+            return;
+        }
+        this._copyOperation(this._processingCopy, opIndex);
+        this._processingCopy = null;
+    }
+    copyOperationGlobal(opIndex) {
+        if (!this._assertValidProcessingCopy('copying operation variable to global on Zone')) {
+            return;
+        }
+        let z = this;
+        while (z.parent != null) {
+            z = z.parent;
+        }
+        z._copyOperation(this._processingCopy, opIndex);
+        this._processingCopy = null;
+    }
+    _copyOperation(processingCopy, opIndex) {
+        const zoneName = ab2str32(processingCopy.getName());
+        const zoneKeyAb = processingCopy.getKey().length ? processingCopy.getKey() : null;
+        const opValue = model.operations.getResult(opIndex);
+        if (!opValue) {
+            return model.logger.error(`could not copy operation at index ${opIndex} to zone variable named ${zoneName}`);
+        }
+        const curValue = this.vars.get(zoneName);
+        if (!curValue) {
+            return this.vars.set(zoneName, opValue);
+        }
+        const parsedValue = parseVariableValue(opValue.getValue());
+        const variableValue = parsedValue && JSON.parse(parsedValue.toString());
+        if (!zoneKeyAb) {
+            return curValue.setParsedValue(variableValue);
+        }
+        curValue.setValueByKey(zoneKeyAb, variableValue);
+    }
+    _setLocalVar(processingVar) {
+        const name = ab2str32(processingVar.getName());
+        let variable = this.vars.get(name);
+        if (!variable) {
+            variable = VariableFactory.get(processingVar.typeCode);
+            this.vars.set(name, variable);
+        }
+        if (processingVar.getKey().length) {
+            const key = ab2str32(processingVar.getKey());
+            const keyVariable = variable.getValueByKey(key);
+            variable = keyVariable;
+        }
+        if (processingVar.getValue().length) {
+            variable.setValue(processingVar.getValue());
+        }
+    }
+    _assertProcessingVar(source) {
+        if (!this._processingVar) {
+            model.logger.error(`${source}: processing variable not initialized: initialize variable first`);
+            return false;
+        }
+        return true;
+    }
+    _assertProcessingCopy(source) {
+        if (!this._processingCopy) {
+            model.logger.error(`${source}: processing copy not initialized: initialize copy action first`);
+            return false;
+        }
+        return true;
+    }
+    _assertValidProcessingCopy(source) {
+        if (!this._processingCopy) {
+            model.logger.error(`${source}: processing copy not initialized: initialize copy action first`);
+            return false;
+        }
+        if (!this._processingCopy.getName().length) {
+            model.logger.error(`${source}: processing copy name is empty`);
+            return false;
+        }
+        return true;
+    }
+}
+
+class Returns {
+    constructor() {
+        this.returnVars = [];
+        this.copyName = null;
+        this.copyKey = null;
+    }
+    copyOperation(index) {
+        const returnVar = model.operations.getResult(index);
+        if (!returnVar) {
+            model.logger.error(`copying operation variable to return value on Returns: operation result no found on index ${index}`);
+            return;
+        }
+        this.returnVars.push(returnVar);
+    }
+    newCopyZone() {
+        this.copyName = [];
+        this.copyKey = [];
+    }
+    setCopyName(value) {
+        this.copyName.push(value);
+    }
+    setCopyKey(value) {
+        this.copyKey.push(value);
+    }
+    pushCopyZone() {
+        if (!this._assertValidCopyName('copying zone variable to return value on Returns')) {
+            return;
+        }
+        let returnVar = model.zone.getVar(ab2str32(this.copyName)) || null;
+        if (!returnVar) {
+            model.logger.error(`copying zone variable to return value on Returns: zone variable ${ab2str32(this.copyName)} not found`);
+            this.copyName = null;
+            this.copyKey = null;
+            return;
+        }
+        this.copyName = null;
+        if (!this.copyKey.length) {
+            this.copyKey = null;
+            this.returnVars.push(returnVar);
+            return;
+        }
+        returnVar = returnVar.getValueByKey(ab2str32(this.copyKey));
+        if (!returnVar) {
+            model.logger.error(`copying zone variable to return value on Returns: variable member ${ab2str32(this.copyKey)} not found`);
+            this.copyKey = null;
+            return;
+        }
+        this.copyKey = null;
+        this.returnVars.push(returnVar);
+    }
+    pushVar(v) {
+        this.returnVars.push(v);
+    }
+    shiftVar() {
+        if (!this.returnVars.length) {
+            model.logger.error(`popping a return value on Returns: returns queue is empty`);
+            return null;
+        }
+        return this.returnVars.shift();
+    }
+    _assertValidCopyName(source) {
+        if (!this.copyName) {
+            model.logger.error(`${source}: processing copy not initialized: initialize copy action first`);
+            return false;
+        }
+        if (!this.copyName.length) {
+            model.logger.error(`${source}: processing copy name is empty`);
+            return false;
+        }
+        return true;
+    }
+}
+
+class Environment {
+    constructor() {
+        this.args = new Args();
+        this.zone = new Zone();
+        this.logger = new Logger();
+        this.operations = new Operations();
+        this.returns = new Returns();
+        this.error = new Error$1();
+    }
+    pushArgs() {
+        this.args = new Args(this.args);
+    }
+    popArgs() {
+        this.args = this.args.parent;
+    }
+    pushZone() {
+        this.zone = new Zone(this.zone);
+    }
+    popZone() {
+        this.zone = this.zone.parent;
+    }
+}
+
+const model = new Environment();
+
+var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+const loadWasm = function (file, importObj) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const _importObj = Object.assign(Object.assign({}, importObj), { args: {
+                push: () => model.pushArgs(),
+                pop: () => model.popArgs(),
+                new: (code) => model.zone.newVar(code),
+                write: (value) => model.args.write(value),
+                write_f32: (value) => model.args.write(value),
+                write_f64: (value) => model.args.write(value),
+                new_copy: () => model.args.newCopy(),
+                copy_index: (targetIndex) => model.args.copyIndex(targetIndex),
+                copy_operation: (sourceIndex) => model.args.copyOperation(sourceIndex),
+            }, zone: {
+                push: () => model.pushZone(),
+                pop: () => model.popZone(),
+                new: (code) => model.zone.newVar(code),
+                write_name: (name) => model.zone.setName(name),
+                write_key: (key) => model.zone.setKey(key),
+                write_value: (value) => model.zone.setValue(value),
+                write_value_f32: (value) => model.zone.setValue(value),
+                write_value_f64: (value) => model.zone.setValue(value),
+                new_copy: () => model.zone.newCopy(),
+                copy_name: (targetName) => model.zone.copyName(targetName),
+                copy_key: (targetName) => model.zone.copyKey(targetName),
+                copy_arg: (sourceIndex) => model.zone.copyArg(sourceIndex),
+                copy_operation: (sourceIndex) => model.zone.copyOperation(sourceIndex),
+                copy_operation_global: (sourceIndex) => model.zone.copyOperationGlobal(sourceIndex),
+                set: () => model.zone.setLocalVar(),
+                set_global: () => model.zone.setGlobalVar(),
+            }, operations: {
+                // Imported transformed operations.
+                {{range .InternalFns}}
+                {{.OpName}}: function (...args) {
+                    if (model.args.length() !== {{.NCompositeArgs}}) {
+                        return model.logger.error(`print method expects {{.NArgs}} argument(s) but got ${model.args.length()}`);
+                    }
+                    {{if .CompositeReturn}}const res = {{else}}return {{end}}importObj.{{.Name}}(
+                    {{range .Args}}
+                        {{if .IsPrimitive}}
+                        args[{{.Index}}],
+                        {{else}}
+                        trimOneRight(trimOneLeft(model.args.read({{.Index}}), '"'), '"'),
+                        {{end}}
+                    {{end}}
+                    );
+                    {{if .CompositeReturn}}
+                    model.returns.pushVar(new DummyVar(res));
+                    {{end}}
+                },
+                {{end}}
+                // ------------------------
+                clear: () => model.operations.clear(),
+                new_code: (index) => model.operations.newVar(index, getVariableCode(VariableTypeEnum.SRC)),
+                write: (value) => model.operations.write(value),
+                write_f32: (value) => model.operations.write(value),
+                write_f64: (value) => model.operations.write(value),
+                read: (index) => model.operations.read(index),
+                read_f32: (index) => model.operations.read(index),
+                read_f64: (index) => model.operations.read(index),
+                evaluate: () => model.operations.evaluate()
+            }, returns: {
+                new_copy: () => model.returns.newCopyZone(),
+                copy_name: (value) => model.returns.setCopyName(value),
+                copy_key: (value) => model.returns.setCopyKey(value),
+                copy_var: () => model.returns.pushCopyZone(),
+                copy_operation: (index) => model.returns.copyOperation(index)
+            }, error: {
+                new: () => model.error.new(),
+                set: (value) => model.error.set(value),
+                print: () => model.error.print(),
+            } });
+        const response = yield fetch(file);
+        const wasm = yield response.arrayBuffer();
+        const instantiated = yield WebAssembly.instantiate(wasm, _importObj);
+        const { instance } = instantiated;
+        // Prepare result.
+        const wasmExports = Object.assign(Object.assign({}, instance.exports), {
+            // Exported transformed operations.
+            {{range .ExternalFns}}
+            {{.OpName}}: wmr_{{.Name}}(instance.exports.{{.Name}}),
+            {{end}}
+        });
+        Object.freeze(wasmExports);
+        const wasmInstance = {
+            exports: wasmExports
+        };
+        Object.freeze(wasmInstance);
+        const wasmModule = Object.assign({}, instantiated.module);
+        Object.freeze(wasmModule);
+        const res = {
+            instance: wasmInstance,
+            module: wasmModule
+        };
+        Object.freeze(res);
+        return res;
+    });
+};
+{{range .ExternalFns}}
+    function wmr_{{.Name}}(fn) {
+        return function (...args) {
+            model.pushArgs();
+            {{range .CompositeArgs}}
+            model.args.addArg({{.Code}}, args[{{.Index}}], {{.Index}});
+            {{end}}
+            {{if not .CompositeReturn}}const res = {{end}}fn(
+                {{range .PrimitiveArgs}}
+                args[{{.Index}}],
+                {{end}}
+            );
+            model.popArgs();
+            {{if not .CompositeReturn}}
+            return res;
+            {{else}}
+            const res = model.returns.shiftVar();
+            if (!res) {
+                return undefined;
+            }
+            return JSON.parse(parseVariableValue(res.getValue()));
+            {{end}}
+        };
+    }
+{{end}}
+function trimOneLeft(s, c) {
+    if (typeof s !== 'string') {
+        return s;
+    }
+    if (c === undefined) {
+        c = "\s";
+    }
+    return s.replace(new RegExp("^[" + c + "]"), "");
+}
+function trimOneRight(s, c) {
+    if (typeof s !== 'string') {
+        return s;
+    }
+    if (c === undefined) {
+        c = "\s";
+    }
+    return s.replace(new RegExp("[" + c + "]$"), "");
+}
+setupVariableTypes();
+
+export default loadWasm;
+export { loadWasm };

@@ -1,0 +1,14 @@
+(call $zone.new (i32.const {{.TypeCode}}))
+{{with .Name}}
+	{{range .}}(call $zone.write_name (i32.const {{.}})) {{end}}
+{{end}}
+{{if .IsLocal}}
+	{{if (eq .Type "i32")}}(call $zone.write_value (local.get {{.Index}})){{end}}
+	{{if (eq .Type "f32")}}(call $zone.write_value_f32 (local.get {{.Index}})){{end}}
+	{{if (eq .Type "f64")}}(call $zone.write_value_f64 (local.get {{.Index}})){{end}}
+{{else}}
+	{{if (eq .Type "i32")}}(call $zone.write_value (global.get {{.Index}})){{end}}
+	{{if (eq .Type "f32")}}(call $zone.write_value_f32 (global.get {{.Index}})){{end}}
+	{{if (eq .Type "f64")}}(call $zone.write_value_f64 (global.get {{.Index}})){{end}}
+{{end}}
+(call $zone.set)

@@ -1,0 +1,7 @@
+(call $operations.new_code (i32.const 0))
+{{with .EvalExpr}}
+	{{range .}}(call $operations.write (i32.const {{.}})) {{end}}
+{{end}}
+(drop (call $operations.evaluate)) (; int evaluate() ;)
+(call $returns.copy_operation (i32.const 0))
+(call $operations.clear)

@@ -1,0 +1,22 @@
+#!/usr/bin/env node
+const fs = require('fs');
+
+const file = process.argv[2]
+
+if (!file) {
+    const helpMessage = 'Usage: [node] wrap.js <FILE>'
+    process.stdout.write(helpMessage)
+    return;
+}
+
+const data = fs.readFileSync(file, {encoding: 'utf8', flag: 'r'});
+const res = {};
+
+for (const obj of JSON.parse(data)) {
+    const name = obj.name;
+    let newObj = {...obj};
+    delete newObj.name;
+    res[name] = newObj;
+}
+
+process.stdout.write(JSON.stringify(res));

@@ -1,0 +1,74 @@
+{
+  "_from": "wasm-json-toolkit",
+  "_id": "wasm-json-toolkit@0.2.6",
+  "_inBundle": false,
+  "_integrity": "sha512-MDoIAO4RtPd/tJ6hDzSF2h1ecruGkNI7FV+i4GXoekPd18M4udTJDCNGcltu68IMENreG+ukXog349LwmgxV2A==",
+  "_location": "/wasm-json-toolkit",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "tag",
+    "registry": true,
+    "raw": "wasm-json-toolkit",
+    "name": "wasm-json-toolkit",
+    "escapedName": "wasm-json-toolkit",
+    "rawSpec": "",
+    "saveSpec": null,
+    "fetchSpec": "latest"
+  },
+  "_requiredBy": [
+    "#USER"
+  ],
+  "_resolved": "https://registry.npmjs.org/wasm-json-toolkit/-/wasm-json-toolkit-0.2.6.tgz",
+  "_shasum": "41a21e0192be676a934246c59077b4f787991151",
+  "_spec": "wasm-json-toolkit",
+  "_where": "/home/joao/tmp/wasm",
+  "author": {
+    "name": "mjbecze",
+    "email": "mjbecze@gmail.com"
+  },
+  "bin": {
+    "wasm2json": "bin/wasm2json",
+    "json2wasm": "bin/json2wasm"
+  },
+  "bugs": {
+    "url": "https://github.com/ewasm/wasm-json-toolkit/issues"
+  },
+  "bundleDependencies": false,
+  "dependencies": {
+    "buffer-pipe": "0.0.3",
+    "leb128": "0.0.4",
+    "safe-buffer": "^5.1.2"
+  },
+  "deprecated": false,
+  "description": "this convertes wasm binaries to json and json to wasm binaries",
+  "devDependencies": {
+    "coveralls": "^3.0.1",
+    "nyc": "12.0.2",
+    "standard": "^11.0.1",
+    "tape": "^4.9.0"
+  },
+  "homepage": "https://github.com/ewasm/wasm-json-toolkit",
+  "keywords": [
+    "wasm",
+    "cli"
+  ],
+  "license": "MPL-2.0",
+  "main": "index.js",
+  "name": "wasm-json-toolkit",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ewasm/wasm-json-toolkit.git"
+  },
+  "scripts": {
+    "coverage": "nyc npm test",
+    "coveralls": "npm run coverage && nyc report --reporter=text-lcov | coveralls",
+    "lint": "standard",
+    "test": "node ./test/index.js"
+  },
+  "standard": {
+    "ignore": [
+      "test/wabt"
+    ]
+  },
+  "version": "0.2.6"
+}

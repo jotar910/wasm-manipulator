@@ -1,0 +1,18 @@
+(call $zone.new_copy)
+{{with .Name}}
+	{{range .}}(call $zone.copy_name (i32.const {{.}})) {{end}}
+{{end}}
+{{with .Key}}
+	{{range .}}(call $zone.copy_key (i32.const {{.}})) {{end}}
+{{end}}
+(call $operations.new_code (i32.const 0))
+{{with .EvalExpr}}
+	{{range .}}(call $operations.write (i32.const {{.}})) {{end}}
+{{end}}
+(drop (call $operations.evaluate)) (; int evaluate() ;)
+{{if .IsLocal}}
+	(call $zone.copy_operation (i32.const 0))
+{{else}}
+	(call $zone.copy_operation_global (i32.const 0))
+{{end}}
+(call $operations.clear)

@@ -1,0 +1,8 @@
+(call $zone.new (i32.const {{.TypeCode}}))
+{{with .Name}}
+	{{range .}}(call $zone.write_name (i32.const {{.}})) {{end}}
+{{end}}
+{{with .Value}}
+	{{range .}}(call $zone.write_value (i32.const {{.}})) {{end}}
+{{end}}
+(call $zone.set_global)
