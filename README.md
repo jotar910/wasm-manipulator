@@ -1,809 +1,810 @@
-# **Execução da Ferramenta WasmManipulator**
-A execução da ferramenta WasmManipulator é feita através do executável wmr. Esta suporta um conjunto de opções que permitem providenciar ao utilizador a capacidade de configurar a execução da mesma. A configuração da ferramenta pode ser feita através de variáveis de ambiente ou da passagem de parâmetros ao iniciar a sua execução. No commando representado abaixo encontra-se um exemplo de um comando usado para executar a ferramenta, onde o nome do módulo WASM de entrada é definido numa variável ambiente (WMR\_IN\_MODULE="module.wasm"), e os advices incluídos na execução são definidos no parâmetro de execução (--include=advice\_1,advice\_2).
+# **Execution of the WasmManipulator Tool**
+The execution of the WasmManipulator tool is carried out through the executable wmr. This supports a set of options that provide the user with the ability to configure its execution. The tool's configuration can be done through environment variables or by passing parameters when starting its execution. The command shown below is an example of a command used to execute the tool, where the name of the input WASM module is defined in an environment variable (WMR_IN_MODULE="module.wasm"), and the list of advices included in the execution are defined in the execution parameter (--include=advice_1,advice_2).
 
-> WMR\_IN\_MODULE="module.wasm" **./wmr** --include=advice\_1,advice\_2
+> WMR_IN_MODULE="module.wasm" **./wmr** --include=advice_1,advice_2
 
-Na seguinte tabela encontra-se um resumo das configurações existentes na ferramenta. Cada configuração tem um tipo específico e um valor predefinido.
+The following table summarizes the existing configurations in the tool. Each configuration has a specific type and a default value.
 
-||***Variável Ambiente***|***Parâmetro***|***Tipo***|***Default***|
+||***Environment Variable***|***Parameter***|***Type***|***Default***|
 | - | - | - | - | - |
-|***Ficheiro de entrada do módulo***|WMR\_IN\_MODULE|in\_module|*string*|input.wasm|
-|***Ficheiro de entrada da transformação***|WMR\_IN\_TRANSFORM|in\_transform|*string*|input.yml|
-|***Ficheiro de saída do módulo transformado***|WMR\_OUT\_MODULE|out\_module|*string*|output.wasm|
-|***Ficheiro de saída do JS auxiliar***|WMR\_OUT\_JS|out\_js|*string*|output.js|
-|***Ficheiro de saída do módulo original***|WMR\_OUT\_MODULE\_ORIG|out\_module\_orig|*string*|*null*|
-|***Diretoria com as dependências***|WMR\_DEPENDENCIES\_DIR|dependencies\_dir|*string*|./dependencies/|
-|***Diretoria com dados para execução***|WMR\_DATA\_DIR|data\_dir|*string*|./|
-|***Ficheiro de logs***|WMR\_LOG\_FILE|log\_file|*string*|*null*|
-|***Incluir advices***|WMR\_INCLUDE|include|*string[]*|Todos|
-|***Excluir advices***|WMR\_EXCLUDE|exclude|*string[]*|Nenhum|
-|***Gerar sempre o ficheiro JS***|WMR\_PRINT\_JS|print\_js|*boolean*|*false*|
-|***Gerar sempre o módulo transformado***|WMR\_ALLOW\_EMPTY|allow\_empty|*boolean*|*false*|
-|***Gerar todo os logs***|WMR\_VERBOSE|verbose|*boolean*|*false*|
-|***Não ordenar advices***|WMR\_IGNORE\_ORDER|ignore\_order|*boolean*|*false*|
+|***Input module file***|WMR_IN_MODULE|in_module|*string*|input.wasm|
+|***Input transformation file***|WMR_IN_TRANSFORM|in_transform|*string*|input.yml|
+|***Output file of the transformed module***|WMR_OUT_MODULE|out_module|*string*|output.wasm|
+|***Output file of auxiliary JS***|WMR_OUT_JS|out_js|*string*|output.js|
+|***Output file of the original module***|WMR_OUT_MODULE_ORIG|out_module_orig|*string*|*null*|
+|***Directory with dependencies***|WMR_DEPENDENCIES_DIR|dependencies_dir|*string*|./dependencies/|
+|***Directory with data for execution***|WMR_DATA_DIR|data_dir|*string*|./|
+|***Log file***|WMR_LOG_FILE|log_file|*string*|*null*|
+|***Include advices***|WMR_INCLUDE|include|*string[]*|All|
+|***Exclude advices***|WMR_EXCLUDE|exclude|*string[]*|None|
+|***Always generate the JS file***|WMR_PRINT_JS|print_js|*boolean*|*false*|
+|***Always generate the transformed module***|WMR_ALLOW_EMPTY|allow_empty|*boolean*|*false*|
+|***Generate all logs***|WMR_VERBOSE|verbose|*boolean*|*false*|
+|***Do not order advices***|WMR_IGNORE_ORDER|ignore_order|*boolean*|*false*|
 
 <br>
 
-## **Opções de Configuração**
-**Ficheiro de entrada do módulo**
+## **Configuration Options**
+**Input module file**
 
-Nesta configuração o utilizador deve inserir o ficheiro de entrada que pretende modificar. O ficheiro pode encontrar-se no formato binário (.wasm) ou no formato textual (.wat), e deve conter um módulo WASM válido.
+In this configuration, the user must insert the input file to be modified. The file can be in binary format (.wasm) or textual format (.wat), and must contain a valid WASM module.
 
-Exemplos:
+Examples:
 
-- ./wmr --data\_dir="$HOME/" --in\_module="data/module.wasm" (o ficheiro encontra-se em $HOME/data/module.wasm)
-- WMR\_IN\_MODULE="data/module.wasm" ./wmr (o ficheiro encontra-se em ./data/module.wasm)
+- ./wmr --data_dir="$HOME/" --in_module="data/module.wasm" (file is located in $HOME/data/module.wasm)
+- WMR_IN_MODULE="data/module.wasm" ./wmr (file is located in ./data/module.wasm)
 
-**Ficheiro de entrada da transformação**
+**Input transformation file**
 
-A configuração do ficheiro de entrada que contém as instruções de transformação do módulo deve assumir o formato YAML (YAML Ain't Markup Language).
+The configuration of the input file that contains the module transformation instructions should assume the YAML format (YAML Ain't Markup Language).
 
-Exemplos:
+Examples:
 
-- ./wmr --in\_transform="data/transf.yml" (o ficheiro encontra-se em ./data/transf.yml)
-- WMR\_IN\_TRANSFORM="data/transf.yml" ./wmr (o ficheiro encontra-se em ./data/transf.yml)
+- ./wmr --in_transform="data/transf.yml" (file is located in ./data/transf.yml)
+- WMR_IN_TRANSFORM="data/transf.yml" ./wmr (file is located in ./data/transf.yml)
 
-**Ficheiro de saída do módulo transformado**
+**Output file of the transformed module**
 
-Esta configuração representa o ficheiro resultante das transformações. Este ficheiro será constituído por um módulo válido no formato binário.
+This configuration represents the file resulting from the transformations. This file will consist of a valid module in binary format.
 
-Exemplos:
+Examples:
 
-- ./wmr --out\_module="result.wasm" (o ficheiro encontra-se em ./result.wasm)
-- WMR\_OUT\_MODULE="result.wasm" ./wmr (o ficheiro encontra-se em ./result.wasm)
+- ./wmr --out_module="result.wasm" (file is located in ./result.wasm)
+- WMR_OUT_MODULE="result.wasm" ./wmr (file is located in ./result.wasm)
 
-**Ficheiro de saída do JS auxiliar**
+**Output file of auxiliary JS**
 
-O ficheiro de saída auxiliar ao módulo transformado assume o formato JS (.js). A menos que a configuração “Gerar sempre o ficheiro JS” esteja ativa, este ficheiro nem sempre será criado após a execução da ferramenta. Isto deve-se ao facto do código JS apenas ser necessário caso o utilizador utilize tipos complexos ou *runtime expressions* na transformação do módulo.
+The output file auxiliary to the transformed module assumes the JS format (.js). Unless the "Always generate the JS file" configuration is active, this file is not always created after the tool's execution. This is because JS code is only necessary if the user uses complex types or runtime expressions in the module transformation.
 
-Exemplos:
+Examples:
 
-- ./wmr --out\_js="result.js" (o ficheiro encontra-se em ./result.js)
-- WMR\_OUT\_JS="result.js" ./wmr (o ficheiro encontra-se em ./result.js)
+- ./wmr --out_js="result.js" (file is located in ./result.js)
+- WMR_OUT_JS="result.js" ./wmr (file is located in ./result.js)
 
-**Ficheiro de saída do módulo original**
+**Output file of the original module**
 
-Nesta configuração é indicado se o ficheiro binário inicial no qual sofreu as transformações deverá ser criado. Este ficheiro é criado caso a configuração esteja definida corretamente e o ficheiro de entrada com o módulo a ser transformado seja do tipo textual (.wat).
+This configuration indicates whether the initial binary file on which the transformations were applied should be created. This file is created if the configuration is correctly set and the input file with the module to be transformed is of the textual type (.wat).
 
-Exemplos:
+Examples:
 
-- ./wmr --out\_module\_orig="module\_orig.wasm" (o ficheiro encontra-se em ./module\_orig.wasm)
-- WMR\_OUT\_MODULE\_ORIG="module\_orig.wasm" ./wmr (o ficheiro encontra-se em ./module\_orig.wasm)
+- ./wmr --out_module_orig="module_orig.wasm" (file is located in ./module_orig.wasm)
+- WMR_OUT_MODULE_ORIG="module_orig.wasm" ./wmr (file is located in ./module_orig.wasm)
 
-**Diretoria com as dependências**
+**Directory with dependencies**
 
-Consiste no caminho base (absoluto ou relativo) onde se encontram as dependências necessárias para a execução. A partir desse caminho, devem existir os seguintes executáveis:
+Consists of the base path (absolute or relative) where the necessary dependencies for execution are located. From this path, the following executables should exist:
 
-- ${WMR\_DEPENDENCIES\_DIR}/wabt/wasm2wat
-- ${WMR\_DEPENDENCIES\_DIR}/wabt/wat2wasm
-- ${WMR\_DEPENDENCIES\_DIR}/minifyjs/bin/minify.js
-- ${WMR\_DEPENDENCIES\_DIR}/comby/comby
+- ${WMR_DEPENDENCIES_DIR}/wabt/wasm2wat
+- ${WMR_DEPENDENCIES_DIR}/wabt/wat2wasm
+- ${WMR_DEPENDENCIES_DIR}/minifyjs/bin/minify.js
+- ${WMR_DEPENDENCIES_DIR}/comby/comby
 
-Por predefinição o caminho para as dependências é "./dependencies", sendo que inicia na diretoria onde foi executada a ferramenta.
+By default, the path for dependencies is "./dependencies", starting in the directory where the tool was executed.
 
-Esta configuração pode ser ignorada caso o utilizador possua os executáveis definidos na variável de ambiente "PATH". Esta opção não é recomendada, uma vez que a versão instalada pode causar problemas na execução da ferramenta.
+This configuration can be ignored if the user has the executables defined in the "PATH" environment variable. This option is not recommended, as the installed version may cause problems in the tool's execution.
 
-Exemplos:
+Examples:
 
-- ./wmr --dependencies\_dir="$HOME/"
-- WMR\_DEPENDENCIES\_DIR="$HOME/" ./wmr
+- ./wmr --dependencies_dir="$HOME/"
+- WMR_DEPENDENCIES_DIR="$HOME/" ./wmr
 
-**Diretoria com dados para execução**
+**Directory with data for execution**
 
-Consiste no caminho (absoluto ou relativo) onde se encontram os dados de entrada necessários à ferramenta, e onde os resultados serão armazenados após terminar a execução.
+Consists of the path (absolute or relative) where the input data necessary for the tool are located, and where the results will be stored after finishing the execution.
 
-Por predefinição o caminho da diretoria dos dados de entrada é o mesmo que a diretoria onde foi executada a ferramenta.
+By default, the path of the input data directory is the same as the directory where the tool was executed.
 
-Exemplos:
+Examples:
 
-- ./wmr --data\_dir="$HOME/"
-- WMR\_DATA\_DIR="$HOME/" ./wmr
+- ./wmr --data_dir="$HOME/"
+- WMR_DATA_DIR="$HOME/" ./wmr
 
-**Ficheiro de logs**
+**Log file**
 
-O ficheiro de logs é uma configuração opcional, sendo que por predefinição o logs são imprimidos para a consola. Caso a configuração esteja definida com um ficheiro válido, os logs são imprimidos nesse ficheiro, e não para a consola. Atenção, ficheiros com o mesmo nome serão completamente substituídos por este novo.
+The log file is an optional configuration, by default the logs are printed to the console. If the configuration is set with a valid file, the logs are printed in that file, and not to the console. Be aware, files with the same name will be completely replaced by this new one.
 
-Exemplos:
+Examples:
 
-- ./wmr --log\_file="logs" (o ficheiro encontra-se em ./logs)
-- WMR\_LOG\_FILE="logs" ./wmr (o ficheiro encontra-se em ./logs)
+- ./wmr --log_file="logs" (file is located in ./logs)
+- WMR_LOG_FILE="logs" ./wmr (file is located in ./logs)
 
-**Incluir *advices***
+**Include *advices***
 
-Esta configuração recebe um array com os nomes dos *advices* que devem ser incluídos na transformação. Esta filtragem permite ao utilizador aplicar apenas os *advices* pretendidos, e assim obter resultados diferentes, para o mesmo ficheiro de transformação.
+This configuration receives an array with the names of the *advices* that should be included in the transformation. This filtering allows the user to apply only the desired *advices*, and thus obtain different results, for the same transformation file.
 
-Exemplos:
+Examples:
 
-- ./wmr --include=advice\_1,advice\_2
-- WMR\_INCLUDE=advice\_1,advice\_2 ./wmr
+- ./wmr --include=advice_1,advice_2
+- WMR_INCLUDE=advice_1,advice_2 ./wmr
 
-**Excluir *advices***
+**Exclude *advices***
 
-Esta configuração recebe um array com os nomes dos *advices* que devem ser excluídos na transformação. Esta filtragem permite ao utilizador remover *advices* indesejados, e assim obter resultados diferentes, para o mesmo ficheiro de transformação.
+This configuration receives an array with the names of the *advices* that should be excluded in the transformation. This filtering allows the user to remove unwanted *advices*, and thus obtain different results, for the same transformation file.
 
-Quando definida juntamente com a configuração “Incluir *advices”*, a remoção dos *advices* é feita com base nos que são resultantes dessa configuração.
+When defined together with the “Include *advices”* configuration, the removal of *advices* is done based on those resulting from that configuration.
 
-Exemplos:
+Examples:
 
-- ./wmr --exclude=advice\_1,advice\_2
-- WMR\_EXCLUDE=advice\_1,advice\_2 ./wmr
+- ./wmr --exclude=advice_1,advice_2
+- WMR_EXCLUDE=advice_1,advice_2 ./wmr
 
-**Gerar sempre o ficheiro JS**
+**Always generate the JS file**
 
-Quando esta configuração está ativa, o ficheiro auxiliar JS é sempre criado após a execução da ferramenta, independentemente se é necessário para a integração do módulo WASM numa aplicação ou não.
+When this configuration is active, the auxiliary JS file is always created after the tool's execution, regardless of whether it is necessary for the integration of the WASM module in an application or not.
 
-Por predefinição esta configuração está inativa, sendo que, caso seja necessário para o resultado da ferramenta, o JS é gerado.
+By default, this configuration is inactive, meaning that, if necessary for the result of the tool, the JS is generated.
 
-Exemplos:
+Examples:
 
-- ./wmr --print\_js
-- WMR\_PRINT\_JS=true ./wmr
+- ./wmr --print_js
+- WMR_PRINT_JS=true ./wmr
 
-**Gerar sempre o módulo transformado**
+**Always generate the transformed module**
 
-Ao ativar esta configuração, o módulo resultante da transformação é sempre gerado. Isto significa que a execução dar-se-á mesmo que não sejam encontrados *join-points* no módulo para os *advices* definidos.
+By activating this configuration, the resulting module from the transformation is always generated. This means that the execution will take place even if no join-points are found in the module for the defined *advices*.
 
-Apesar do módulo resultante não possuir qualquer transformação ao código existente, este pode conter código novo inserido pelo utilizador. Este código pode ser inserido através de variáveis globais ou novas funções que interagem entre si ou com os elementos existentes no módulo original (apenas com recurso a índices numéricos).
+Although the resulting module does not contain any transformation to the existing code, it may contain new code inserted by the user. This code can be inserted through global variables or new functions that interact with each other or with the elements existing in the original module (only with recourse to numerical indices).
 
-Exemplos:
+Examples:
 
-- ./wmr --allow\_empty
-- WMR\_PRINT\_JS=true ./wmr
+- ./wmr --allow_empty
+- WMR_PRINT_JS=true ./wmr
 
-**Imprimir todos os logs**
+**Print all logs**
 
-Esta configuração permite que logs de rastreamento sejam imprimidos juntamente com os restantes logs. Com isto, é possível fornecer ao utilizador logs mais detalhados sobre a execução da aplicação. Quando desativa, apenas imprime logs do tipo *info*, ou seja, logs menos detalhados.
+This configuration allows tracing logs to be printed along with the other logs. With this, it is possible to provide the user with more detailed logs about the application's execution. When deactivated, it only prints *info* logs, that is, less detailed logs.
 
-Exemplos:
+Examples:
 
-- ./wmr --print\_js
-- WMR\_PRINT\_JS=true ./wmr
+- ./wmr --print_js
+- WMR_PRINT_JS=true ./wmr
 
-**Não ordenar advices**
+**Do not order advices**
 
-Indica se deve ou não ordenar os advices segundo o campo "Order". Por predefinição os *advices* são ordenados, sendo que caso não seja indicado o valor no campo "Order", o *advice* é colocado no fim da lista de execução.
+Indicates whether or not to order the advices according to the "Order" field. By default, advices are ordered, and if the value is not indicated in the "Order" field, the advice is placed at the end of the execution list.
 
-Exemplos:
+Examples:
 
-- ./wmr --ignore\_order
-- WMR\_IGNORE\_ORDER=true ./wmr
+- ./wmr --ignore_order
+- WMR_IGNORE_ORDER=true ./wmr
 
-**Nota:**
+**Note:**
 
-Qualquer caminho inserido será relativo à diretoria com os dados para execução, isto é, o caminho terá por base o caminho definido na configuração “Diretoria com dados para execução”.
+Any path entered will be relative to the directory with the data for execution, that is, the path will be based on the path defined in the configuration "Directory with data for execution".
 
 ---
 
-# **Especificação da Linguagem do WasmManipulator**
-A linguagem para transformação de WASM utiliza o YAML para organizar e estruturar as instruções. Com isto, a sua estrutura de campos encontra-se ilustrada no código abaixo. À frente de cada campo existe um breve descrição dos mesmos no formato de um comentário.
+# **WasmManipulator Language Specification**
+The language for WASM transformation uses YAML to organize and structure instructions. With this, its field structure is illustrated in the code below. In front of each field, there is a brief description of them in the format of a comment.
 
 ```js
 {
-  Pointcuts: Mapa, // possui a definição de pointcuts globais, isto é, que poderão ser utilizados em qualquer advice definido.
-  Aspects: Mapa, // possui os dados de transformação do módulo.
-  Context: { // definição e inicialização de elementos no contexto global do módulo.
-    Variables: Mapa, // declaração e inicialização das variáveis globais.
-    Functions: { // definição das funções a acrescentar ao módulo.
-        Variables: Mapa, // declaração e inicialização das variáveis locais.
-        Args: Array<{ // define a lista de argumentos recebidos pela função.
-          Name: string, // referente ao nome do argumento.
-          Type: string, // referente ao tipo do argumento.
-        }>,
-        Result: string, // tipo do valor retornado pela função.
-        Code: string, // código da função. O código deve ter o formato WAT e pode possuir expressões específicas da aplicação.
-        Imported: { // declara a função como sendo uma função importada.
-          Module: string, // nome do módulo onde a definição da função está inserida.
-          Field: string, // nome do campo onde a definição da função está inserida (dentro do módulo).
-        },
-        Exported: string, // declara a função como sendo uma função exportada. Caso a função já tenha sido marcada como uma função importada, esta instrução é ignorada.
-    },
-  },
-  Advices: { // definição dos advices a utilizar na transformação.
-    Pointcut(obrigatório): string, // definição do pointcut para o advice. Pointcuts globais podem ser utilizados aqui.
-    Variables: Mapa, // declaração e inicialização das variáveis locais a inserir nas funções a aplicar as alterações.
-    Advice: string, // código que substituirá os join-points. O código deve ter o formato WAT e pode possuir expressões específicas da aplicação.
-    Order: i32, // ordem que o advice deve executar.
-    All (default: false): boolean, // indica se todas as funções são utilizadas na execução do \pointcut\, ou seja, para além das funções no código, também devem ser usadas as funções adicionadas pelo utilizador através da ferramenta.
-    Smart(default: false): boolean, // indica se a transformação é inteligente.
-  },
-  Start: string, // código a ser adicionado à função inicial do módulo. O código deve ter o formato WAT e pode possuir expressões específicas da aplicação.
-  Templates: Mapa, // possui os templates que poderão ser utilizados nos pointcuts.
+  Pointcuts: Map, // has the definition of global pointcuts, i.e., which can be used in any defined advice.
+  Aspects: Map, // has the data for module transformation.
+  Context: { // definition and initialization of elements in the global context of the module.
+    Variables: Map, // declaration and initialization of global variables.
+    Functions: { // definition of functions to be added to the module.
+        Variables: Map, // declaration and initialization of local variables.
+        Args: Array<{ // defines the list of arguments received by the function.
+          Name: string, // related to the name of the argument.
+          Type: string, // related to the type of the argument.
+        }>,
+        Result: string, // type of the returned value by the function.
+        Code: string, // function code. The code must be in WAT format and may contain specific expressions of the application.
+        Imported: { // declares the function as an imported function.
+          Module: string, // name of the module where the function definition is inserted.
+          Field: string, // name of the field where the function definition is inserted (within the module).
+        },
+        Exported: string, // declares the function as an exported function. If the function has already been marked as an imported function, this instruction is ignored.
+    },
+  },
+  Advices: { // definition of the advices to use in the transformation.
+    Pointcut(required): string, // definition of the pointcut for the advice. Global pointcuts can be used here.
+    Variables: Map, // declaration and initialization of local variables to insert in the functions to apply the changes.
+    Advice: string, // code that will replace the join-points. The code must be in WAT format and may contain specific expressions of the application.
+    Order: i32, // order that the advice must execute.
+    All (default: false): boolean, // indicates if all functions are used in the execution of the \pointcut\, that is, in addition to the functions in the code, the functions added by the user through the tool should also be used.
+    Smart(default: false): boolean, // indicates if the transformation is intelligent.
+  },
+  Start: string, // code to be added to the initial function of the module. The code must be in WAT format and may contain specific expressions of the application.
+  Templates: Map, // has the templates that can be used in the pointcuts.
 }
 ```
 
-## **Sintaxe**
-Para facilitar a especificação da linguagem vão ser utilizados os seguintes tipos:
+## **Syntax**
+To facilitate the specification of the language, the following types will be used:
 
-- *Object* - representa um objeto YAML, isto é, um elemento de chave-valor. Opcionalmente pode ter um tipo de valor específico, e para isso, é utilizada a sintaxe *Object<T>* (em que *T* é o tipo do valor).
-- *Array* - representa um *array* YAML, isto é, uma lista. A lista deve ter um valor específico, e por isso, é sempre representada com a seguinte sintaxe *Array<T>* (em que *T* é o tipo do valor).
-- *String* - representa um caracteres ASCII que formam um valor textual.
-- *Identifier* - consiste numa *String* composta por caracteres alfanuméricos e o símbolo "\_".
-- *Type* - consiste numa *String* que representa os tipos de dados existentes na ferramenta.
-- *Variable* - consiste numa *String* utilizada para declarar e inicializar variáveis.
-- *Code* - representa o código no formato de uma *String*. Este é composto por código WAT e pode possuir determinadas instruções que se encontram especificadas abaixo.
-- *CodeFunction* - é um subtipo de *Code*, utilizado apenas em funções.
-- *CodeAdvice* - é um subtipo de *Code*, utilizado apenas em *advices*.
-- *Pointcut* - consiste numa expressão *String* que representa a definição de um pointcut.
-- *PointcutGlobal* - é um subtipo de *Pointcut*, com um formato específico para ser invocado por outros pointcuts.
-- *PointcutAdvice* - é um subtipo de *Pointcut*, utilizado diretamente no *advice* e com a capacidade de recolher informação de contexto do módulo.
-- *Template* - consiste numa *String* que servirá de template na busca de código.
+- *Object* - represents a YAML object, i.e., a key-value element. Optionally, it may have a specific value type, and for this, the syntax *Object<T>* is used (where *T* is the value type).
+- *Array* - represents a YAML array, i.e., a list. The list must have a specific value, so it is always represented with the following syntax *Array<T>* (where *T* is the value type).
+- *String* - represents ASCII characters that form a textual value.
+- *Identifier* - consists of a *String* composed of alphanumeric characters and the "_" symbol.
+- *Type* - consists of a *String* representing the data types available in the tool.
+- *Variable* - consists of a *String* used to declare and initialize variables.
+- *Code* - represents code in the format of a *String*. This is composed of WAT code and may contain certain instructions that are specified below.
+- *CodeFunction* - a subtype of *Code*, used only in functions.
+- *CodeAdvice* - a subtype of *Code*, used only in *advices*.
+- *Pointcut* - consists of a *String* expression representing the definition of a pointcut.
+- *PointcutGlobal* - a subtype of *Pointcut*, with a specific format to be invoked by other pointcuts.
+- *PointcutAdvice* - a subtype of *Pointcut*, used directly in the *advice* and capable of gathering context information from the module.
+- *Template* - consists of a *String* that will serve as a template in code search.
 
-No código abaixo encontra-se ilustrada a mesma estrutura especificada no seguinte código mas com estes tipos aplicados aos campos.
+Below is an illustration of the same structure specified in the following code but with these types applied to the fields.
 
 ```js
 {
-  Pointcuts: PointcutGlobal,
-  Aspects: {
-    Context: {
-      Variables: Map<Variable>,
-      Functions: {
-          Variables: Map<Variable>,
-          Args: Array<{
-            Name: Identifier,
-            Type: Type,
-          }>,
-          Result: Type,
-          Code: CodeFunction,
-          Imported: {
-            Module: String,
-            Field: String,
-          },
-          Exported: String,
-      },
-    },
-    Advices: {
-      Pointcut: PointcutAdvice,
-      Variables: Map<Variable>,
-      Advice: CodeAdvice,
-      Order: i32,
-      All: boolean,
-      Smart: boolean,
-    },
-  },
-  Start: CodeFunction,
-  Templates: Map<Template>,
+  Pointcuts: PointcutGlobal,
+  Aspects: {
+    Context: {
+      Variables: Map<Variable>,
+      Functions: {
+          Variables: Map<Variable>,
+          Args: Array<{
+            Name: Identifier,
+            Type: Type,
+          }>,
+          Result: Type,
+          Code: CodeFunction,
+          Imported: {
+            Module: String,
+            Field: String,
+          },
+          Exported: String,
+      },
+    },
+    Advices: {
+      Pointcut: PointcutAdvice,
+      Variables: Map<Variable>,
+      Advice: CodeAdvice,
+      Order: i32,
+      All: boolean,
+      Smart: boolean,
+    },
+  },
+  Start: CodeFunction,
+  Templates: Map<Template>,
 }
 ```
-
 ### **String**
-Por definição, uma *string* é considerada um tipo de dados que consiste num array de bytes que armazena uma sequência de elementos usando um determinado tipo de codificação (Team, 2006). Contudo, no caso da ferramenta, *String* é uma derivação deste tipo de dados, cujos elementos são sempre caracteres, ou seja, este *array* é considerado sempre um elemento textual, usando ASCII como tipo de codificação.
-### **Identifier**
-*Identifier* é um elemento textual do tipo *String*, no entanto, suporta apenas caracteres do tipo alfanumérico e o *underscore*. É utilizado para identificadores tais como nomes de funções e variáveis.
-### **Type**
-O *Type* não é bem um tipo de dados, mas sim uma enumeração de *Strings* com os tipos de dados disponíveis para os elementos WASM na ferramenta. Estes tipos (Gohman, Lepesme, Qwerty2501, Spencer, & Um, 2021) são os seguintes:
+By definition, a *string* is considered a data type consisting of a byte array that stores a sequence of elements using a certain type of encoding (Team, 2006). However, in the case of the tool, *String* is a derivation of this data type, whose elements are always characters, that is, this *array* is always considered a textual element, using ASCII as the type of encoding.
 
-- *i32* - inteiro *32-bits.*
-- *i64* - inteiro *64-bits.*
-- *f32* - real *32-bits* (IEEE 754-2008).
-- *f64* - real *64-bits* (IEEE 754-2008).
-- *string* - possui as mesmas características do tipo *String.*
-- *map*[*string*|*i32*|*f32*]*Type* - estrutura de dados do tipo mapa, ou seja, uma estrutura semelhante a uma tabela que permite indexar valores através de uma chave.
-- []*Type* - estrutura de dados do tipo *array*, isto é, uma estrutura equivalente a uma lista de valores.
+### **Identifier**
+*Identifier* is a textual element of type *String*, however, it only supports alphanumeric characters and the *underscore*. It is used for identifiers such as function names and variables.
+
+### **Type**
+*Type* is not exactly a data type, but rather an enumeration of *Strings* with the data types available for WASM elements in the tool. These types (Gohman, Lepesme, Qwerty2501, Spencer, & Um, 2021) are as follows:
+
+- *i32* - 32-bit integer.
+- *i64* - 64-bit integer.
+- *f32* - 32-bit real (IEEE 754-2008).
+- *f64* - 64-bit real (IEEE 754-2008).
+- *string* - has the same characteristics as the *String* type.
+- *map*[string|i32|f32]*Type* - a map-type data structure, i.e., a structure similar to a table that allows indexing values through a key.
+- []*Type* - an array-type data structure, i.e., a structure equivalent to a list of values.
 
 ### **Variable**
-O tipo *Variable* consiste numa expressão do tipo *String* que permite declarar e inicializar uma dada variável. Para isso, esta variável deve sempre ser utilizada como valor num objeto YAML, sendo que a chave consistirá no nome da variável.
+The *Variable* type consists of a *String*-type expression that allows declaring and initializing a given variable. For this, this variable must always be used as a value in a YAML object, with the key consisting of the variable's name.
 
-A sintaxe para uma variável é a seguinte: `@tipo < = @valor >?`.
+The syntax for a variable is as follows: `@type < = @value >?`.
 
-Como o termo indica, o "tipo" consiste no tipo da variável a declarar. Este é do tipo *Type* e é obrigatório na expressão. A inicialização com "valor" é opcional, sendo que caso não seja incluído, a variável assume o valor nulo associado ao tipo. A informação relativa ao valor encontra-se descrita na seguinte tabela.
+As the term indicates, the "type" consists of the variable's type to declare. This is of the *Type* type and is mandatory in the expression. Initialization with "value" is optional, and if not included, the variable assumes the null value associated with the type. Information related to the value is described in the following table.
 
-|***Tipo***|***Valor***|***Nulo***|***Exemplo***|
+|***Type***|***Value***|***Null***|***Example***|
 | - | - | - | - |
 |***i32***|i64|0|-1|
 |***i64***|i64|0|1|
 |***f32***|f32|0|1.1|
 |***f64***|f64|0|-1.1|
 |***string***|string|“”|“example”|
-|***map***|array<[key,value]>|[]|[["key\_1", 1],["key\_2", 2]]|
+|***map***|array<[key,value]>|[]|[["key_1", 1],["key_2", 2]]|
 |***array***|array<value>|[]|[1,2]|
-  
+
 <br>
-  
+
 ### **Code**
-A base para o código utilizado na linguagem da ferramenta é o WAT. Partindo desta base foram adicionadas as seguintes extensões exclusivas à linguagem da ferramenta:
+The basis for the code used in the tool's language is WAT. Based on this base, the following exclusive extensions to the tool's language have been added:
 
-- *Static Expressions* – são expressões interpretadas estaticamente, logo só têm acesso a contexto extático, como por exemplo, o nome de uma função.
-- *Runtime Expressions* – são expressões sensíveis ao contexto e interpretadas em tempo de execução.
-- *Runtime References* – são referências para variáveis interpretadas em tempo de execução.
+- *Static Expressions* – are expressions interpreted statically, thus only having access to static context, such as the name of a function.
+- *Runtime Expressions* – are context-sensitive expressions interpreted at runtime.
+- *Runtime References* – are references to variables interpreted at runtime.
 
-As expressões (*static* e *runtime*) têm acesso ao contexto onde são aplicadas, sendo que este varia de acordo com o ambiente onde são utilizadas. O único contexto que é comum a todas as expressões é o contexto global, ou seja, funções e variáveis globais definidas no ficheiro de transformações. Os dados incluídos no contexto são acedidos através do respetivo identificador, por exemplo, se no ficheiro de transformações fosse declarada uma nova variável global com o nome “variable”, no interior das expressões, é necessário utilizar esse nome para substituir o identificador pelo índice da variável. Estas expressões são interpretadas pela ferramenta e numa fase final transformadas em código WAT.
+Expressions (*static* and *runtime*) have access to the context in which they are applied, and this varies according to the environment in which they are used. The only context that is common to all expressions is the global context, i.e., global functions and variables defined in the transformation file. Data included in the context is accessed through the respective identifier, for example, if a new global variable named “variable” was declared in the transformation file, inside the expressions, this name must be used to replace the identifier with the variable's index. These expressions are interpreted by the tool and in a final stage transformed into WAT code.
 
 ### **CodeFunction**
-*CodeFunction* é um subtipo de *Code* que disponibiliza às expressões o acesso ao contexto da função criada. Desta forma, o utilizador consegue aceder aos argumentos da função, às suas variáveis locais, etc.
+*CodeFunction* is a subtype of *Code* that provides expressions access to the context of the created function. This way, the user can access the function's arguments, its local variables, etc.
 ### **CodeAdvice**
 
-*CodeAdvice* é também um subtipo de *Code* que disponibiliza às expressões o acesso ao contexto do advice. Com isto, as expressões têm acesso não só aos dados definidos no *advice*, mas também à informação fornecida pelos *join-points* encontrados.
+*CodeAdvice* is also a subtype of *Code* that provides expressions access to the advice context. With this, expressions have access not only to data defined in the *advice*, but also to information provided by the found *join-points*.
 
-O código presente neste elemento consiste no código que irá substituir o conteúdo a que cada *join-point* está associado. Desta forma, segundo as linguagens orientadas a aspetos, este consiste numa operação "*around*". No entanto, com recurso à *keyword* this que permite a inclusão do código associado, o utilizador é capaz de realizar as operações "*before*" e "*after*" sobre o *join-point* em questão.
+The code in this element consists of the code that will replace the content to which each *join-point* is associated. Thus, according to aspect-oriented languages, this consists of an "around" operation. However, with the use of the keyword this that allows the inclusion of associated code, the user can perform the "before" and "after" operations on the respective *join-point*.
 ### **Pointcut**
-Tal como na definição do *pointcut*, este tipo tem como objetivo encontrar um conjunto de *join-*points que coincidam com a expressão definida.
+As in the definition of *pointcut*, this type aims to find a set of *join-*points that match the defined expression.
 
-A sintaxe de um *Pointcut* varia de acordo com o tipo, contudo é sempre semelhante, parecendo-se com uma função *lambda* do JS:
+The syntax of a *Pointcut* varies according to the type, however, it is always similar, resembling a JS *lambda* function:
 
-(@parâmetro <, @parâmetro>\*) => @expressão.
+(@parameter <, @parameter>*) => @expression.
 
-Os "parâmetros" variam de acordo com o tipo de *Pointcut*, no entanto a "expressão" mantém sempre o mesmo formato independentemente do tipo de *Pointcut Expression*.
+The "parameters" vary according to the type of *Pointcut*, however, the "expression" always keeps the same format regardless of the type of *Pointcut Expression*.
 ### **PointcutGlobal**
-O *PointcutGlobal* é usado para definir um *pointcut* com propriedades globais, que pode ser incluído nos *pointcuts* associados a *advices*. Com isto, estes não possuem qualquer acesso ao contexto das funções, sendo que os parâmetros passados para o *lambda* são meras variáveis, desconhecidas pelo *pointcut*, e apenas controladas pelo invocador.
+*PointcutGlobal* is used to define a *pointcut* with global properties, which can be included in *pointcuts* associated with *advices*. With this, they do not have any access to the functions' context, with the parameters passed to the *lambda* being mere variables, unknown to the *pointcut*, and only controlled by the invoker.
 
-A sintaxe para o parâmetro do pointcut global é:
+The syntax for the global pointcut parameter is:
 
-@tipo? @nome.
+@type? @name.
 
-O "tipo" consiste no tipo da variável, é opcional, e é do tipo *Type*. Quando definido, é criada uma restrição sobre o tipo do parâmetro, quando este não é, o parâmetro pode assumir qualquer tipo. O "nome" é do tipo *Identifier* e consiste no nome da variável que será utilizado como referência na expressão do *Pointcut*.
+The "type" consists of the variable's type, is optional, and is of the *Type* type. When defined, a restriction is created on the type of the parameter, when it is not, the parameter can assume any type. The "name" is of the *Identifier* type and consists of the variable's name that will be used as a reference in the *Pointcut*'s expression.
 
 ### **PointcutAdvice**
-O *PointcutAdvice* é também usado para definir um *pointcut*, contudo disponibiliza o acesso aos dados de contexto das funções. Estes dados de contexto são passados como parâmetros, e podem ser utilizados tanto na expressão do *Pointcut* como no código do *advice*.
+*PointcutAdvice* is also used to define a *pointcut*, however, it provides access to the functions' context data. This context data is passed as parameters and can be used both in the *Pointcut* expression and in the advice code.
 
-A expressão deste tipo de *Pointcut* pode invocar *Pointcuts* do tipo *PointcutGlobal*, passando-lhes as variáveis de contexto como argumentos.
+The expression of this type of *Pointcut* can invoke *Pointcuts* of the *PointcutGlobal* type, passing them the context variables as arguments.
 
-A sintaxe para o parâmetro deste pointcut é:
+The syntax for the parameter of this pointcut is:
 
-> <@tipo\_variável.>?@tipo\_contexto[@índice] @nome.
+> <@variable_type.?@context_type[@index] @name.
 
-Para este tipo de *Pointcut* existem dois tipos de dados, o tipo da variável ("tipo\_variável"), e o tipo de contexto ("tipo\_contexto"). O tipo de variável é do tipo *Type* e refere-se à variável em si, o tipo de contexto é mais semelhante a um metadado, e refere-se ao tipo da variável no contexto de uma função. Este é composto por dois tipos: param (parâmetro) ou local (variável local). O "índice" pode assumir um valor numérico (ordem da variável dentro do seu contexto – semelhante ao espaço de índices, no entanto, há uma separação entre variáveis locais e parâmetros) ou o valor do índice em si (evitar uso em relação ao código original visto que no momento da transformação este pode ser imprevisível. O "nome" é do tipo *Identifier* e consiste no nome da variável, sendo este utilizado como referência na expressão do *Pointcut*.
+For this type of *Pointcut*, there are two types of data, the variable type ("variable_type"), and the context type ("context_type"). The variable type is of the *Type* type and refers to the variable itself, the context type is more similar to metadata, and refers to the type of the variable in the context of a function. This is composed of two types: param (parameter) or local (local variable). The "index" can take a numeric value (order of the variable within its context – similar to the index space, however, there is a separation between local variables and parameters) or the value of the index itself (avoid use concerning the original code since at the time of transformation this can be unpredictable. The "name" is of the *Identifier* type and consists of the variable's name, being used as a reference in the *Pointcut*'s expression.
 
 ### **Template**
-Por fim, o tipo *Template* consiste numa *String* que servirá de padrão na procura de código. Esta procura é feita com recurso à ferramenta Comby.
+Finally, the *Template* type consists of a *String* that will serve as a pattern in the code search. This search is done using the Comby tool.
 
-Para além de texto, o *Template* é composto por uma extensão parecida com as *static expressions*, no entanto, apesar de possuírem a mesma sintaxe, as expressões no *Template* são muito mais limitadas, tendo acesso apenas ao contexto presente no mesmo. Por esta razão, e por forma a distinguir ambos os tipos, estas vão ser chamadas de *template expressions*.
+In addition to text, the *Template* is composed of an extension similar to *static expressions*, however, despite having the same syntax, the expressions in the *Template* are much more limited, having access only to the context present in it. For this reason, and to distinguish both types, these will be called *template expressions*.
 
 ## **Pointcut Expressions**
-*Pointcut expressions* são um tipo expressões utilizadas na definição de um *Pointcut*, onde o utilizador combina um conjunto de funções *pointcut* através de operadores lógicos. Neste capítulo vão ser abordadas as várias funções disponibilizadas para criar uma destas expressões e quais os operadores disponíveis na ferramenta.
+*Pointcut expressions* are a type of expressions used in the definition of a *Pointcut*, where the user combines a set of *pointcut* functions through logical operators. In this chapter, the various functions provided to create one of these expressions and the operators available in the tool will be addressed.
 
-Os *pointcuts* disponíveis na ferramenta são os seguintes:
+The *pointcuts* available in the tool are as follows:
 
-- func - encontra funções com uma determinada definição.
-- call - encontra chamadas a funções que coincidam com uma determinada definição.
-- args - encontra chamadas a funções que sejam chamadas com determinadas restrições nos argumentos.
-- returns - encontra as instruções de retorno de um função.
-- template - encontra um conjunto de instruções que coincidam com a definição do *template*.
+- func - finds functions with a certain definition.
+- call - finds calls to functions that match a certain definition.
+- args - finds calls to functions that are called with certain restrictions on the arguments.
+- returns - finds the return instructions of a function.
+- template - finds a set of instructions that match the *template*'s definition.
 
-Cada *pointcut* disponibiliza um conjunto de informação ao contexto do advice. Para aceder aos dados do *pointcut*, basta utilizar a *keyword* da função de *pointcut* dentro das expressões.
+Each *pointcut* provides a set of information to the advice context. To access the *pointcut* data, just use the *keyword* of the *pointcut* function within the expressions.
 
-O acesso a estes dados deve ser feita de forma cautelosa, uma vez que, quando combinados com os operadores lógicos poderão ficar inconsistentes, uma vez que a expressão poderá provocar que determinados pointcuts tornem-se inválidos (por exemplo, na expressão func || args poderão existir situações em que apenas uma das duas funções de *pointcut* exista no *join-point* resultante).
+Access to this data must be done cautiously, as, when combined with logical operators, they may become inconsistent, as the expression may cause certain pointcuts to become invalid (for example, in the expression func || args there may be situations where only one of the two *pointcut* functions exists in the resulting *join-point*).
 
-Uma nota sobre os *join-points* encontrados: quando estes se sobrepõem, é sempre escolhido aquele que se encontra num nível de profundidade superior do código. O outro é ignorado, uma vez que se encontra inserido no primeiro. Por exemplo, na situação em que o *pointcut* call é executado sobre a expressão (call $f0 (call $f1)), apesar de coincidirem as instruções (call $f1) e (call $f0 (call $f1), a que prevalece é a exterior ((call $f0 (call $f1))).
+A note on the found *join-points*: when they overlap, the one at a higher depth level in the code is always chosen. The other is ignored, as it is embedded in the first. For example, in the situation where the *pointcut* call is executed on the expression (call $f0 (call $f1)), despite the instructions (call $f1) and (call $f0 (call $f1) coinciding, the prevailing one is the outer ((call $f0 (call $f1))).
 
 ### **Pointcut func**
-O *pointcut* func filtra os *join-points* de acordo com a definição da função a que pertencem. Isto é, as instruções presentes no *join-point* devem pertencer a uma função que coincida com a configuração definida pelo utilizador.
+The *pointcut* func filters *join-points* according to the definition of the function to which they belong. That is, the instructions present in the *join-point* must belong to a function that matches the configuration defined by the user.
 
-Caso a execução do *pointcut* seja feita sobre um ambiente vazio (primeira operação a ser executada), este cria um *join-point* para cada função que coincide com a definição, envolvendo todas as instruções presentes nessa função.
+If the execution of the *pointcut* is done in an empty environment (first operation to be executed), it creates a *join-point* for each function that matches the definition, encompassing all the instructions present in that function.
 
-#### **Sintaxe**
-A sintaxe para o *pointcut* func é:
+#### **Syntax**
+The syntax for the *pointcut* func is:
 
-> func(@retorno @função(@parâmetros?)<, @scope>?).
+> func(@return @function(@parameters?)<, @scope>?).
 
-Os elementos da sintaxe poderão assumir múltiplos valores. Na seguinte tabela estão descritos estes elementos e a respetiva sintaxe.
+The elements of the syntax can assume multiple values. The following table describes these elements and their respective syntax.
 
-**Nome**: retorno<br>
-**Descrição**: Tipo de retorno<br>
-**Observações**:
-- "tipo" é do tipo *Type*
-- "ident" é do tipo *Identifier*
+**Name**: return<br>
+**Description**: Return type<br>
+**Observations**:
+- "type" is of type *Type*
+- "ident" is of type *Identifier*
 
-|***Sintaxe***|***Significado***|***Exemplo***|
+|***Syntax***|***Meaning***|***Example***|
 | - | - | - |
-|***\****|qualquer tipo de retorno|\*|
-|***void***|sem retorno|void|
-|***@tipo***|tipo do retorno|i32|
-|***%@ident%***|designação do tipo fica armazenado numa variável; qualquer tipo de retorno|%var%|
-|***%@ident:void%***|designação do tipo fica armazenado numa variável; sem retorno|%var:void%|
-|***%@ident:@tipo%***|designação do tipo fica armazenado numa variável; tipo do retorno|%var:i32%|
+|***\****|any return type|\*|
+|***void***|no return|void|
+|***@type***|return type|i32|
+|***%@ident%***|type designation stored in a variable; any return type|%var%|
+|***%@ident:void%***|type designation stored in a variable; no return|%var:void%|
+|***%@ident:@type%***|type designation stored in a variable; return type|%var:i32%|
 
 <br/>
 
-**Nome**: função<br>
-**Descrição**: Identificador da função<br>
-**Observações**:
-- "nome", "ident", "índice\_nome" são do tipo *Identifier*
-- "regex" é do tipo *String*
-- "índice\_ordem" é do tipo *i32* (*Type*)
+**Name**: function<br>
+**Description**: Function identifier<br>
+**Observations**:
+- "name", "ident", "index_name" are of type *Identifier*
+- "regex" is of type *String*
+- "index_order" is of type *i32* (*Type*)
 
 
-|***Sintaxe***|***Significado***|***Exemplo***|
+|***Syntax***|***Meaning***|***Example***|
 | - | - | - |
-|***\****|qualquer identificador|\*|
-|***@ nome***|nome exportado da função|fn\_name|
-|***/@regex/***|expressão regular para o nome exportado da função|/\w+/|
-|***$@índice\_nome***|índice textual da função|$f1|
-|***[@índice\_ordem]***|índice de ordem da função|[1]|
+|***\****|any identifier|\*|
+|***@ name***|exported name of the function|fn_name|
+|***/@regex/***|regular expression for the exported name of the function|/\w+/|
+|***$@index_name***|textual index of the function|$f1|
+|***[@index_order]***|order index of the function|[1]|
 |***%@ident%***||%fn%|
-|***%@ident:@nome%***|nome exportado fica armazenado numa variável; nome exportado da função|%fn:fn\_name%|
-|***%@ident:/@regex/%***|nome exportado fica armazenado numa variável; expressão regular para o nome exportado da função|%fn:/\w+/%|
-|***%@ident:$@índice\_nome%***|índice (textual) fica armazenado numa variável; índice textual da função|%fn:$f1%|
-|***%@ident:[@índice\_ordem]%***|índice (ordem) fica armazenado numa variável; índice de ordem da função|%fn:[1]%|
+|***%@ident:@name%***|exported name stored in a variable; exported name of the function|%fn:fn_name%|
+|***%@ident:/@regex/%***|exported name stored in a variable; regular expression for the exported name of the function|%fn:/\w+/%|
+|***%@ident:$@index_name%***|index (textual) stored in a variable; textual index of the function|%fn:$f1%|
+|***%@ident:[@index_order]%***|index (order) stored in a variable; order index of the function|%fn:[1]%|
 
 <br/>
 
-**Nome**: parâmetros<br>
-**Descrição**: Parâmetros da função<br>
-**Observações**:
-- A sintaxe para o "parâmetro" está definida abaixo
+**Name**: parameters<br>
+**Description**: Function parameters<br>
+**Observations**:
+- The syntax for "parameter" is defined below
 
-|***Sintaxe***|***Significado***|***Exemplo***|
+|***Syntax***|***Meaning***|***Example***|
 | - | - | - |
-||sem parâmetros||
-|***..***|qualquer configuração para os parâmetros|..|
-|***@parâmetro <, @parâmetro>\****|tipo do retorno|i32 %p0%, i64|
+||no parameters||
+|***..***|any configuration for the parameters|..|
+|***@parameter <, @parameter>\****|return type|i32 %p0%, i64|
 
 <br/>
 
-**Nome**: parâmetro<br>
-**Descrição**: Parâmetro da função<br>
-**Observações**:
-- "tipo" é do tipo *Type*
-- "ident" é do tipo *Identifier*
+**Name**: parameter<br>
+**Description**: Function parameter<br>
+**Observations**:
+- "type" is of type *Type*
+- "ident" is of type *Identifier*
 
-|***Sintaxe***|***Significado***|***Exemplo***|
+|***Syntax***|***Meaning***|***Example***|
 | - | - | - |
-|***\****|qualquer parâmetro na respetiva ordem|\*|
-|***@tipo***|parâmetro de um tipo específico|i32|
-|***\* %@ident%***|parâmetro de qualquer tipo armazenado numa variável|\* %p0%|
-|***@tipo %@ident%***|parâmetro de um tipo específico armazenado numa variável|i32 %p0%|
+|***\****|any parameter in the respective order|\*|
+|***@type***|parameter of a specific type|i32|
+|***\* %@ident%***|parameter of any type stored in a variable|\* %p0%|
+|***@type %@ident%***|parameter of a specific type stored in a variable|i32 %p0%|
 
 <br/>
 
-**Nome**: scope<br>
-**Descrição**: *Scope* da função no módulo<br>
+**Name**: scope<br>
+**Description**: Function's *scope* in the module<br>
 
-|***Sintaxe***|***Significado***|***Exemplo***|
+|***Syntax***|***Meaning***|***Example***|
 | - | - | - |
-||a função pode conter qualquer *scope*||
-|***imported***|função importada|imported|
-|***exported***|função exportada|exported|
-|***internal***|função interna (privada, ou seja, nem importada, nem exportada)|internal|
+||the function can have any *scope*||
+|***imported***|imported function|imported|
+|***exported***|exported function|exported|
+|***internal***|internal function (private, i.e., neither imported nor exported)|internal|
 
-#### **Dados de Contexto**
-Na seguinte tabela está representado o modelo de dados (Func) que representa a informação que é acrescentada ao contexto do *advice*. Estes dados estão associados à função que possui as instruções incluídas no *join-point*. Os dados estão contidos no identificador func, que poderá ser invocado nas expressões do código.
+#### **Context Data**
+The following table represents the data model (Func) that provides information added to the context of the *advice*. These data are associated with the function that contains the instructions included in the *join-point*. The data are contained in the identifier func, which can be invoked in the code expressions.
 
-|***Nome***|***Tipo***|***Descrição***|
+|***Name***|***Type***|***Description***|
 | - | - | - |
-|***Index***|string|Nome do índice da função.|
-|***Order***|i32|Ordem do índice da função.|
-|***Name***|string|Caso exportada, consiste no nome exportado da função. Caso contrário, é igual ao nome do índice.|
-|***Params***|Array<string>|Lista com os nomes dos índices dos parâmetros.|
-|***ParamTypes***|Array<string>|Lista com os tipos dos parâmetros.|
-|***TotalParams***|i32|Número total dos parâmetros.|
-|***Locals***|Array<string>|Lista com os nomes dos índices das variáveis locais.|
-|***LocalTypes***|Array<string>|Lista com os tipos das variáveis locais.|
-|***TotalLocals***|i32|Número total das variáveis locais.|
-|***ResultType***|string|Tipo do resultado da função.|
-|***Code***|string|Instruções da função em formato textual.|
-|***IsImported***|boolean|Se a função é importada.|
-|***IsExported***|boolean|Se a função é exportada.|
-|***IsStart***|boolean|Se a função é executada inicialmente.|
+|***Index***|string|Name of the function's index.|
+|***Order***|i32|Order of the function's index.|
+|***Name***|string|If exported, consists of the exported name of the function. Otherwise, it is equal to the index name.|
+|***Params***|Array<string>|List of the names of the parameter indices.|
+|***ParamTypes***|Array<string>|List of the types of the parameters.|
+|***TotalParams***|i32|Total number of parameters.|
+|***Locals***|Array<string>|List of the names of the local variable indices.|
+|***LocalTypes***|Array<string>|List of the types of the local variables.|
+|***TotalLocals***|i32|Total number of local variables.|
+|***ResultType***|string|Type of the function's result.|
+|***Code***|string|Instructions of the function in textual format.|
+|***IsImported***|boolean|Whether the function is imported.|
+|***IsExported***|boolean|Whether the function is exported.|
+|***IsStart***|boolean|Whether the function is initially executed.|
 
 ### **Pointcut call**
-O *pointcut* call tem como objetivo encontrar instruções que correspondam a chamadas a funções com uma determinada configuração. Os *join-points* gerados pelo *pointcut* correspondem à instrução na globalidade, incluindo não só a instrução da chamada, mas também as instruções correspondentes aos argumentos passados à função.
+The *pointcut* call aims to find instructions that correspond to calls to functions with a certain configuration. The *join-points* generated by the *pointcut* correspond to the instruction in its entirety, including not only the call instruction but also the instructions corresponding to the arguments passed to the function.
 
-#### **Sintaxe**
-A sintaxe utilizada para a configuração é igual à sintaxe para o *pointcut* func. Isto deve-se ao facto de que ambos dependem da configuração da função para operar.
+#### **Syntax**
+The syntax used for the configuration is the same as the syntax for the *pointcut* func. This is because both depend on the function's configuration to operate.
 
-Com isto, a sintaxe para o *pointcut* call é:
+Thus, the syntax for the *pointcut* call is:
 
-> call(@retorno @função(@parâmetros?)).
+> call(@return @function(@parameters?)).
 
-A descrição dos vários elementos da sintaxe encontra-se expressa na tabela da secção com o *pointcut* func.
+The description of the various elements of the syntax is expressed in the table in the section with the *pointcut* func.
 
-#### **Dados de Contexto**
-À semelhança do *pointcut* func, o *pointcut* call acrescenta dados relacionados com a função a que o *join-point* está associado. Contudo, estes dados tanto existem para a função que fez a chamada, como para a função que foi invocada, e por isso são encapsulados campos diferentes. Para além desses campos, são também incluídos os dados relacionados com os argumentos passados na instrução da chamada. Este modelo de dados encontra-se representado na seguinte tabela. Os dados estão contidos no identificador call, que poderá ser invocado nas expressões do código.
+#### **Context Data**
+Similar to the *pointcut* func, the *pointcut* call adds data related to the function associated with the *join-point*. However, these data exist for both the function that made the call and the function that was invoked and therefore are encapsulated in different fields. In addition, data related to the arguments passed in the call instruction are also included. This data model is represented in the following table. The data are contained in the identifier call, which can be invoked in the code expressions.
 
-|***Nome***|***Tipo***|***Descrição***|
+|***Name***|***Type***|***Description***|
 | - | - | - |
-|***Callee***|Func (Tabela *func*)|Dados da função invocada.|
-|***Caller***|Func (Tabela *func*)|Dados da função que invocou.|
-|***Args***|Array<Arg> (Tabela *arg*)|Lista com a informação dos argumentos.|
-|***TotalArgs***|i32|Número total de argumentos.|
+|***Callee***|Func (Table *func*)|Data of the invoked function.|
+|***Caller***|Func (Table *func*)|Data of the function that invoked.|
+|***Args***|Array<Arg> (Table *arg*)|List with information about the arguments.|
+|***TotalArgs***|i32|Total number of arguments.|
 
-O objeto Arg possui a informação relativa ao argumento de uma função. O seu modelo de dados encontra-se representado na seguinte tabela.
+The Arg object contains information related to a function's argument. Its data model is represented in the following table.
 
-|***Nome***|***Tipo***|***Descrição***|
+|***Name***|***Type***|***Description***|
 | - | - | - |
-|***Type***|string|Tipo do argumento.|
-|***Order***|i32|Ordem do argumento na chamada.|
-|***Instr***|string|Código WAT do argumento.|
+|***Type***|string|Type of the argument.|
+|***Order***|i32|Order of the argument in the call.|
+|***Instr***|string|WAT code of the argument.|
 
 ### **Pointcut args**
-O *pointcut* args, tal como o *pointcut* call, tem como objetivo encontrar chamadas a funções, no entanto, a pesquisa para este é feita com recurso às variáveis de contexto passadas como parâmetros ao *Pointcut*.
+The *pointcut* args, like the *pointcut* call, aims to find calls to functions, however, the search for this is done using context variables passed as parameters to the *Pointcut*.
 
-Ao aceitar apenas variáveis de contexto para a pesquisa faz com que os resultados a obter sejam muito específicos, uma vez que a instrução da chamada deve ter obrigatoriamente nos seus argumentos o acesso a essas variáveis (instrução local.get).
+By accepting only context variables for the search makes the results to be obtained very specific, since the call instruction must necessarily have in its arguments access to these variables (local.get instruction).
 
-#### **Sintaxe**
-A sintaxe para o *pointcut* args é:
+#### **Syntax**
+The syntax for the *pointcut* args is:
 
-> args(<@argumento <, @argumento>\*>?).
+> args(<@argument <, @argument>\*>?).
 
-O *pointcut* aceita qualquer número de argumentos, sendo que cada "argumento" é do tipo *Identifier* e corresponde a uma variável de contexto do *Pointcut*.
+The *pointcut* accepts any number of arguments, each "argument" being of the *Identifier* type and corresponding to a context variable of the *Pointcut*.
 
-#### **Dados de Contexto**
-O modelo de dados do *pointcut* args é igual ao do *pointcut* call, e por isso encontra-se representado na tabela da respetiva secção do *pointcut*. Este é também composto pelos dados referentes a ambas as funções (a função invocada e a que invocou a chamada) e pelos dados referentes aos argumentos passados na instrução. Os dados estão contidos no identificador args, que poderá ser invocado nas expressões do código.
+#### **Context Data**
+The data model of the *pointcut* args is the same as that of the *pointcut* call, and therefore it is represented in the table of the respective section of the *pointcut*. It also includes data related to both functions (the invoked function and the one that made the call) and data related to the arguments passed in the instruction. The data are contained in the args identifier, which can be invoked in the code expressions.
 
 ### ***Pointcut* returns**
-O *pointcut* returns tem como objetivo encontrar todas as instruções de retorno de uma dada função. Este aceita na sua configuração um dado tipo, que permite filtrar os *join-points* por tipo de retorno.
+The *pointcut* returns aims to find all the return instructions of a given function. It accepts a certain type in its configuration, which allows filtering the *join-points* by return type.
 
-#### **Sintaxe**
-A sintaxe para o *pointcut* returns é:
+#### **Syntax**
+The syntax for the *pointcut* returns is:
 
-> returns(@tipo).
+> returns(@type).
 
-O "tipo" consiste no tipo de dados esperado no retorno, sendo que também é aceite o valor \* para indicar que os *join-points* não requerem nenhum tipo de retorno em específico.
+The "type" consists of the expected data type in the return, and the value \* is also accepted to indicate that the *join-points* do not require any specific type of return.
 
-#### **Dados de Contexto**
-O modelo de dados correspondente aos dados de contexto adicionados após a execução do *pointcut* returns está representado na seguinte tabela. Estes dados estão relacionados à instrução de retorno a que o *join-point* está associado. Os dados estão contidos no identificador returns, que poderá ser invocado nas expressões do código.
+#### **Context Data**
+The data model corresponding to the context data added after the execution of the *pointcut* returns is represented in the following table. These data are related to the return instruction that the *join-point* is associated with. The data are contained in the returns identifier, which can be invoked in the code expressions.
 
-|***Nome***|***Tipo***|***Descrição***|
+|***Name***|***Type***|***Description***|
 | - | - | - |
-|***Func***|Func (Tabela *func*)|Dados da função que contém a instrução de retorno.|
-|***Type***|string|Tipo da instrução de retorno.|
-|***Instr***|string|Código WAT do instrução de retorno.|
+|***Func***|Func (Table *func*)|Data of the function that contains the return instruction.|
+|***Type***|string|Type of the return instruction.|
+|***Instr***|string|WAT code of the return instruction.|
 
 ### ***Pointcut* template**
-Este *pointcut* é utilizado para realizar a pesquisa por padrão na ferramenta. Para isso, deve ser referenciado o respetivo *template* que servirá de padrão durante a pesquisa por *join-points*.
+This *pointcut* is used to perform pattern search in the tool. For this, the respective *template* that will serve as a pattern during the search for *join-points* must be referenced.
 
-#### **Sintaxe**
-A sintaxe para o *pointcut* template é:
+#### **Syntax**
+The syntax for the *pointcut* template is:
 
-> template(<@template <, @validação>).
+> template(<@template <, @validation>).
 
-O "template" indicado no *pointcut* corresponde a uma das chaves presente no ficheiro de transformação, dentro do objeto *Templates*, que está associada ao *template* que servirá de padrão na pesquisa.
+The "template" indicated in the *pointcut* corresponds to one of the keys in the transformation file, within the *Templates* object, which is associated with the template that will serve as a pattern in the search.
 
-A "validação" é do tipo *boolean* (true ou false), e serve para indicar se o *template* está a ser executado apenas como forma de validação ou não. Por predefinição esta configuração está desativada, o que significa que os resultados obtidos apenas contém as instruções que coincidem diretamente com a definição do *template*. Ao ativar a configuração, o *template* servirá apenas como um padrão de validação, onde não é feita a filtragem das instruções, e por isso, qualquer entrada que possua no seu conteúdo o padrão definido no *template* é adicionado aos resultados. Desta forma, caso um *join-point* seja válido para um dado *template*, todas as instruções deste *join-point* se mantêm.
+The "validation" is of the *boolean* type (true or false), and serves to indicate whether the template is being executed just as a form of validation or not. By default, this configuration is deactivated, which means that the results obtained only contain the instructions that directly match the definition of the template. When activating the configuration, the template will only serve as a validation pattern, where no filtering of instructions is done, and therefore, any entry that has in its content the pattern defined in the template is added to the results. Thus, if a *join-point* is valid for a given template, all instructions of this *join-point* remain.
 
-#### **Dados de Contexto**
-Ao contrário dos outros *pointcuts*, o identificador adicionado ao contexto do *advice* corresponde à chave do *template* incluído na definição, e não o nome da própria função de *pointcut*. Com isto, são extraídos as várias variáveis definidas no *template* e encapsulados no identificador de contexto (chave do *template*). Depois, o seu acesso e manipulação é realizado através das funções disponibilizadas nas *static expressions*.
+#### **Context Data**
+Unlike other *pointcuts*, the identifier added to the context of the *advice* corresponds to the key of the template included in the definition, and not the name of the pointcut function itself. With this, the various variables defined in the template are extracted and encapsulated in the context identifier (template key). Then, their access and manipulation are performed through the functions available in the *static expressions*.
 
-### **Operadores Lógicos**
-Estes *pointcuts* são combinados com recurso aos seguintes operadores lógicos:
+### **Logical Operators**
+These *pointcuts* are combined using the following logical operators:
 
-- && - corresponde ao operador lógico "*And*".
-- || - corresponde ao operador lógico "*Or*".
-- () - usado no agrupamento de operações.
+- && - corresponds to the logical operator "*And*".
+- || - corresponds to the logical operator "*Or*".
+- () - used in the grouping of operations.
 
 ## **Code Expressions**
 
 ### **Static Expressions**
-As *static expressions*, ou expressões estáticas, permitem a manipulação do código, o acesso aos dados do contexto, e a realização de operações sobre informação conhecida em *compile time* (informação estática ou proveniente do contexto do *advice*).
+*Static expressions*, or static expressions, allow the manipulation of code, access to context data, and the performance of operations on information known at *compile time* (static information or from the context of the *advice*).
 
-Este tipo de expressões representam o principal sistema utilizado pela ferramenta para implementar no código um paradigma orientado a aspetos. Isto deve-se ao facto de não só permitirem manipular conteúdo estático, como também as instruções presentes no *join-point*. Estas instruções estão disponíveis através do identificador this. Como resultado existe uma forma flexível de interagir com cada *join-point*, onde é possível reproduzir as operações comuns às linguagens AOP, tais como, inserir "antes" ou "depois", "substituir" as instruções, etc. Para além disso, a ferramenta também permite a transformação destes dados através das funções de transformação.
+This type of expressions represents the main system used by the tool to implement an aspect-oriented paradigm in the code. This is because they not only allow manipulation of static content, but also the instructions present in the *join-point*. These instructions are available through the this identifier. As a result, there is a flexible way to interact with each *join-point*, where it is possible to reproduce common operations of AOP languages, such as inserting "before" or "after", "replacing" instructions, etc. In addition, the tool also allows the transformation of these data through transformation functions.
 
-#### **Sintaxe**
-A sintaxe presente nas *static expressions* é a seguinte:
+#### **Syntax**
+The syntax present in the *static expressions* is as follows:
 
-> %@variável<:@método>\*%.
+> %@variable<:@method>\*%.
 
-A "variável" refere-se ao identificador da variável existente no contexto do *advice* ou da função onde é incluída. Relativamente ao "método", este consiste numa função de transformação, em que a sua utilização segue um paradigma funcional (Noleto, 2020), ou seja, são encadeados de forma imperativa, formando uma sequência de operações que ao receber o mesmo valor, devolvem sempre o mesmo resultado.
+The "variable" refers to the identifier of the variable existing in the context of the *advice* or the function where it is included. Regarding the "method", it consists of a transformation function, in which its use follows a functional paradigm (Noleto, 2020), that is, they are chained imperatively, forming a sequence of operations that when receiving the same value, always return the same result.
 
-#### **Contexto**
-As *static expressions* podem ser utilizadas tanto em funções como em *advices*. Desta forma, o contexto depende do sítio onde é aplicada a expressão.
+#### **Context**
+*Static expressions* can be used both in functions and in *advices*. Thus, the context depends on where the expression is applied.
 
-Os dados presentes no contexto disponibilizado para as expressões incluídas na definição de funções são os seguintes:
+The data present in the context provided for the expressions included in the definition of functions are as follows:
 
-- Parâmetros da função.
-- Variáveis locais.
-- Variáveis globais.
-- Funções declaradas no ficheiro de transformação.
+- Function parameters.
+- Local variables.
+- Global variables.
+- Functions declared in the transformation file.
 
-Relativamente, ao contexto disponibilizado nas expressões incluídas no código de um *advice*, este é composto pelos seguintes dados:
+Regarding the context provided in the expressions included in the code of an *advice*, it is composed of the following data:
 
-- O código do *join-point* (identificador this).
-- Variáveis disponibilizadas pelos *pointcuts*.
-- Parâmetros do *pointcut*.
-- Variáveis locais definidas no *advice*.
-- Variáveis globais.
-- Funções declaradas no ficheiro de transformação.
+- The code of the *join-point* (identifier this).
+- Variables provided by the *pointcuts*.
+- *Pointcut* parameters.
+- Local variables defined in the *advice*.
+- Global variables.
+- Functions declared in the transformation file.
 
-#### **Tipos de Variáveis**
-Nas *static expressions* os dados possuem tipos distintos. Cada um deste tipo possui um conjunto de funções de transformação associado, que por sua vez, poderá ter comportamentos também diferentes. Desta forma, foram criados os seguintes tipos de dados:
+#### **Variable Types**
+In *static expressions*, data have distinct types. Each of these types has a set of associated transformation functions, which in turn, may have different behaviors. Thus, the following data types were created:
 
-- *string* - equivalente ao tipo de dados *String*.
-- *string\_slice* - consiste num *array* de dados com o tipo *String*.
-- *template\_search* - corresponde ao resultado obtido num dado *template*.
-- *object* - consiste num objeto composto. Pode assumir o tipo *array*, *mapa*, *objeto*, *string*, *i32*, *i64*, *f32*, *f64* ou *null*.
+- *string* - equivalent to the *String* data type.
+- *string_slice* - consists of an *array* of data with the *String* type.
+- *template_search* - corresponds to the result obtained in a given template.
+- *object* - consists of a composite object. It can be of the type *array*, *map*, *object*, *string*, *i32*, *i64*, *f32*, *f64*, or *null*.
 
-Quando estas expressões são convertidas para WAT, o seu valor é automaticamente convertido para o respetivo valor do tipo *string*. Neste caso, é invocada a função de transformação string() sobre o resultado da expressão.
+When these expressions are converted to WAT, their value is automatically converted to the respective *string* type. In this case, the string() transformation function is invoked on the result of the expression.
 
-#### **Funções de Transformação**
-Cada função de transformação recebe um valor de entrada e devolve o respetivo resultado de acordo com a operação executada. O tipo dos dados de entrada/saída varia de acordo com a função aplicada. Para além disto, a configuração dos parâmetros da função também varia com o tipo de função.
+#### **Transformation Functions**
+Each transformation function receives an input value and returns the respective result according to the operation performed. The type of the input/output data varies according to the applied function. In addition, the configuration of the function parameters also varies with the type of function.
 
-Na seguinte tabela encontram-se representadas todas as funções de transformação disponíveis na ferramenta. Para cada função é apresentada uma pequena descrição, a sua sintaxe, exemplos de utilização e os tipos dos valores de entrada e saída.
+The following table represents all the transformation functions available in the tool. For each function, a brief description, its syntax, examples of use, and the types of input and output values are presented.
 
-|***Função***|***Descrição***|
+|***Function***|***Description***|
 | - | - |
-|***string***|Converte o valor de entrada numa *String*.|
-||***Sintaxe*:** string().|
-||<p>***Exemplos***:</p><p>1. ["1","2","3"]:string() → "123".</p><p>2. object<{k1:"v1"}>:string() → "{\"k1\":\"v1\"}".</p>|
-||<p>***Tipos***:</p><p>- string → string .</p><p>- string\_slice → string.</p><p>- template\_search → string.</p><p>- object → string.</p>|
-|***type***|Devolve o tipo do valor do valor de entrada.|
-||***Sintaxe***: type().|
-||<p>***Exemplos***:</p><p>1. ["1","2","3"]:type() → "string\_slice".</p>|
-||<p>***Tipos***:</p><p>- string → string .</p><p>- string\_slice → string.</p><p>- template\_search → string.</p><p>- object → string.</p>|
-|***order***|Devolve a ordem do índice associado a uma dada função.|
-||***Sintaxe*:** order().|
-||<p>***Exemplos***:</p><p>1. "$f1":string() → "1".</p>|
-||<p>***Tipos***:</p><p>- string → string .</p><p>- string\_slice → string.</p><p>- template\_search → string.</p><p>- object → string.</p>|
-|***map***|Cria um novo valor a partir do valor de entrada, chamando uma função específica em cada elemento presente no respetivo valor de entrada.|
-||<p>***Sintaxe*:** map((@entrada <, @índice>?) => @expressão).</p><p>A "entrada" consiste no identificador que referencia cada elemento presente no valor de entrada.</p><p>O “índice” é opcional e corresponde ao índice numérico da iteração.</p><p>A "expressão" consiste na expressão que será interpretada e originará uma entrada no valor de saída (no lugar do elemento de entrada). Esta "expressão" será sempre convertida para *string*.</p>|
-||<p>***Exemplos***:</p><p>1. ["1","2","3"]:map((v) => "num " + v) → ["num 1","num 2","num 3"].</p><p>2. object<{k1:"v1",k2:"v2"}>:map((v) => v) → ["v1","v2"].</p><p>3. object<["v1","v2"]>:map((v) => v) → ["v1","v2"].</p>|
-||<p>***Tipos***:</p><p>- string → string.</p><p>- string\_slice → string\_slice.</p><p>- template\_search → string\_slice.</p><p>- object → string\_slice.</p>|
-|***repeat***|Repete o valor de entrada um dado número de vezes.|
-||<p>***Sintaxe*:** repeat(@n).</p><p>"n" é um valor numérico referente ao número de vezes que o valor de entrada vai ser repetido. Uma particularidade da função é que quando a entrada é um *array*, a saída não será um *array* de *arrays*, mas sim um *array* com cada valor repetido “n” vezes.</p>|
-||<p>***Exemplos***:</p><p>1. "123":repeat(2) → ["123","123"].</p><p>2. ["1","2","3"]:repeat(2) → ["1","1","2","2","3","3"].</p><p>3. object<["1","2","3"]>:repeat(2) → ["1","1","2","2","3","3"].</p><p>4. object<{k1:"1"}>:repeat(2) → ["{\"k1\":\"1\"}","{\"k1\":\"1\"}].</p>|
-||<p>***Tipos***:</p><p>- string → string\_slice.</p><p>- string\_slice → string\_slice.</p><p>- template\_search → string\_slice.</p><p>- object → string\_slice.</p>|
-|***join***|Conecta os elementos do valor de entrada utilizando um determinado separador.|
-||<p>***Sintaxe*:** join(@separador).</p><p>O "separador" é utilizado para juntar os vários elementos para um resultado do tipo *string*. Este é sempre convertido para *string*.</p>|
-||<p>***Exemplos***:</p><p>1. ["1","2"]:join(",") → "1,2".</p><p>2. object<{k1:"1",k2:"2"}>:join(",") → "1,2".</p>|
-||<p>***Tipos***:</p><p>- string → string.</p><p>- string\_slice → string.</p><p>- object → string.</p>|
-|***split***|Divide a entrada numa *array* de *strings*.|
-||<p>***Sintaxe*:** split(@separador).</p><p>O "separador" é utilizado para separar os vários elementos para um resultado do tipo *string*. Este é sempre convertido para *string*.</p>|
-||<p>***Exemplos***:</p><p>1. "123":split("") → ["1","2","3"].</p><p>2. "12345":split("2") → ["1","345"].</p>|
-||<p>***Tipos***:</p><p>- string → string\_slice.</p>|
-|***count***|Devolve o número de elementos do valor de entrada.|
-||***Sintaxe*:** count().|
-||<p>***Exemplos***:</p><p>1. "321":count()→ "3".</p><p>2. ["4","3","2","1"]:count() → "4".</p><p>3. object<{k1:"1",k2:"2"}>:count() → "2".</p>|
-||<p>***Tipos***:</p><p>- string → string .</p><p>- string\_slice → string.</p><p>- template\_search → string.</p><p>- object → string.</p>|
-|***contains***|Devolve se o valor de entrada contém um dado valor/chave.|
-||<p>***Sintaxe*:** contains(@valor).</p><p>O "valor" é sempre convertido para *string*.</p>|
-||<p>***Exemplos***:</p><p>1. "321":contains("2") → "true".</p><p>2. ["4","3","2","1"]:contains("5") → "false".</p><p>3. object<{k1:"1",k2:"2"}>:contains("k2") → "true".</p>|
-||<p>***Tipos***:</p><p>- string → string .</p><p>- string\_slice → string.</p><p>- template\_search → string.</p><p>- object → string.</p>|
-|***assert***|Interrompe a cadeia de operações caso a condição não seja atendida.|
-||<p>***Sintaxe*:** assert((@entrada => @condição).</p><p>A "entrada" consiste no identificador que referencia o valor de entrada.</p><p>A "condição" será sempre transformada sempre num valor booleano.</p>|
-||<p>***Exemplos***:</p><p>1. "123":assert((v) => v - 1 == 122) → "123".</p><p>2. "123":assert((v) => v - 1 != 122) → "".</p>|
-||<p>***Tipos***:</p><p>- string → string | "".</p><p>- string\_slice → string\_slice | "".</p><p>- template\_search → template\_search | "".</p><p>- object → object | "".</p>|
-|***replace***|Substitui conteúdo do valor de entrada, ou parte do mesmo, por um novo valor.|
-||<p>***Sintaxe*:** replace(@valor\_anterior, @valor\_novo).</p><p>O "valor\_anterior" consiste no valor que deve ser substituído pelo "valor\_novo". Ambos os parâmetros, "valor\_anterior" e "valor\_novo", serão sempre convertidos para *string*.</p>|
-||<p>***Exemplos***:</p><p>1. "123":replace("2","5") → "153".</p><p>2. ["1","2","3"]:replace("1","5") → ["5","2","3"].</p><p>3. object<{k1:"1",k2:"2"}>:replace("k2","3") → object<{k1:"1",k2:"3"}>.</p><p>4. search<{result:"1|2",values:{k1:"1",k2:"2"}}>:remove("k1","3") → search<{result:"3|2",values:{k1:"3",k2:"2"}}>.</p>|
-||<p>***Tipos***:</p><p>- string → string.</p><p>- string\_slice → string\_slice.</p><p>- template\_search → template\_search.</p><p>- object → object.</p>|
-|***remove***|Remove parte do conteúdo do valor de entrada.|
-||<p>***Sintaxe*:** remove(@valor).</p><p>O "valor" corresponde à configuração que será removida do valor de entrada. Este é sempre convertido para *string*.</p>|
-||<p>***Exemplos***:</p><p>1. "123":remove("23") → "1".</p><p>2. ["1","2","3"]:remove("2") → ["1","3"].</p><p>3. object<{k1:"1",k2:"2"}>:remove("k2") → object<{k1:"1"}>.</p><p>4. search<{result:"1|2",values:{k1:"1",k2:"2"}}>:remove("k1") → search<{result:"|2",values:{k2:"2"}}>.</p>|
-||<p>***Tipos***:</p><p>- string → string.</p><p>- string\_slice → string\_slice.</p><p>- template\_search → template\_search.</p><p>- object → object.</p>|
-|***filter***|Filtra elementos do valor de entrada segundo uma determinada condição.|
-||<p>***Sintaxe*:** filter((@entrada <, @índice>?) => @expressão).</p><p>A "entrada" corresponde ao elemento do valor de entrada.</p><p>O “índice” é opcional e corresponde ao índice numérico da iteração.</p><p>A "expressão" consiste na expressão que será interpretada e dependendo do resultado, o valor será adicionado (ou não) no valor de saída.</p>|
-||<p>***Exemplos***:</p><p>1. "147":filter((v)=>v%2!=0) → "17".</p><p>2. ["1","4","7"]:filter((v)=>v%2==0) → ["4"].</p><p>3. object<{k1:"1",k2:"2"}>:filter((v)=>v%2==0) → ["2"].</p><p>4. search<{result:"1|2",values:{k1:"1",k2:"2"}}>:filter((v)=>v!="2") → "1|".</p>|
-||<p>***Tipos***:</p><p>- string → string.</p><p>- string\_slice → string\_slice.</p><p>- template\_search → string.</p><p>- object → string\_slice.</p>|
-|***slice***|Altera o conteúdo de um valor de entrada selecionando o intervalo indicado.|
-||<p>***Sintaxe*:** slice(@início <, @fim>?).</p><p>O "início" e o "fim" correspondem aos índices do intervalo que corresponderá ao valor de saída. Estes valores devem ser numéricos, sendo que o "fim" é opcional, assumindo o tamanho do valor de entrada por predefinição.</p>|
-||<p>***Exemplos***:</p><p>1. "147":slice(1) → "47".</p><p>2. ["1","4","7"]:slice(0,1) → ["1"].</p><p>3. object<{k1:"1",k2:"2"}>:slice(1)  → ["2"].</p>|
-||<p>***Tipos***:</p><p>- string → string.</p><p>- string\_slice → string\_slice.</p><p>- template\_search → string.</p><p>- object → string\_slice.</p>|
-|***splice***|Altera o conteúdo de um valor de entrada removendo o intervalo indicado.|
-||<p>***Sintaxe*:** splice(@início <, @fim>?).</p><p>O "início" e o "fim" correspondem aos índices do intervalo a remover. Estes valores devem ser numéricos, sendo que o "fim" é opcional, assumindo o tamanho do valor de entrada por predefinição.</p>|
-||<p>***Exemplos***:</p><p>1. "147":splice(1) → "1".</p><p>2. ["1","4","7"]:splice(0,1) → ["4","7"].</p><p>3. object<{k1:"1",k2:"2"}>:splice(1)  → ["1"].</p>|
-||<p>***Tipos***:</p><p>- string → string.</p><p>- string\_slice → string\_slice.</p><p>- template\_search → string.</p><p>- object → string\_slice.</p>|
-|***select***|Seleciona um sub-valor do template.|
-||<p>***Sintaxe*:** select(@ident) .</p><p>O "ident" corresponde ao identificador do valor no resultado do *template*. Este é sempre convertido para *string*.</p>|
-||<p>***Exemplos***:</p><p>1. search<{result:"1|2",values:{k1:"1",k2:"2"}}>:select("k1") → search<{result:"1",values:{}}> .</p>|
-||<p>***Tipos***:</p><p>- template\_search → template\_search.</p>|
-|***reverse***|Reverte a ordem dos elementos de entrada.|
-||***Sintaxe*:** reverse().|
-||<p>***Exemplos***:</p><p>1. ["1","2","3"]:reverse() → ["3","2","1"].</p><p>2. "123":reverse() → "321".</p>|
-||<p>***Tipos***:</p><p>- string → string.</p><p>- string\_slice → string\_slice.</p><p>- template\_search → string.</p><p>- object → object.</p>|
+|***string***|Converts the input value into a *String*.|
+||***Syntax***: string().|
+||<p>***Examples***:</p><p>1. ["1","2","3"]:string() → "123".</p><p>2. object<{k1:"v1"}>:string() → "{\"k1\":\"v1\"}".</p>|
+||<p>***Types***:</p><p>- string → string.</p><p>- string\_slice → string.</p><p>- template\_search → string.</p><p>- object → string.</p>|
+|***type***|Returns the type of the input value.|
+||***Syntax***: type().|
+||<p>***Examples***:</p><p>1. ["1","2","3"]:type() → "string\_slice".</p>|
+||<p>***Types***:</p><p>- string → string.</p><p>- string\_slice → string.</p><p>- template\_search → string.</p><p>- object → string.</p>|
+|***order***|Returns the order of the index associated with a given function.|
+||***Syntax***: order().|
+||<p>***Examples***:</p><p>1. "$f1":string() → "1".</p>|
+||<p>***Types***:</p><p>- string → string.</p><p>- string\_slice → string.</p><p>- template\_search → string.</p><p>- object → string.</p>|
+|***map***|Creates a new value from the input value by calling a specific function on each element present in the respective input value.|
+||<p>***Syntax***: map((@input <, @index>?) => @expression).</p><p>"input" refers to the identifier that references each element in the input value.</p><p>"index" is optional and corresponds to the numerical index of the iteration.</p><p>"expression" consists of the expression that will be interpreted and will generate an entry in the output value (in place of the input element). This "expression" will always be converted to *string*.</p>|
+||<p>***Examples***:</p><p>1. ["1","2","3"]:map((v) => "num " + v) → ["num 1","num 2","num 3"].</p><p>2. object<{k1:"v1",k2:"v2"}>:map((v) => v) → ["v1","v2"].</p><p>3. object<["v1","v2"]>:map((v) => v) → ["v1","v2"].</p>|
+||<p>***Types***:</p><p>- string → string.</p><p>- string\_slice → string\_slice.</p><p>- template\_search → string\_slice.</p><p>- object → string\_slice.</p>|
+|***repeat***|Repeats the input value a given number of times.|
+||<p>***Syntax***: repeat(@n).</p><p>"n" is a numeric value referring to the number of times the input value will be repeated. A peculiarity of the function is that when the input is an *array*, the output will not be an *array* of *arrays*, but an *array* with each value repeated “n” times.</p>|
+||<p>***Examples***:</p><p>1. "123":repeat(2) → ["123","123"].</p><p>2. ["1","2","3"]:repeat(2) → ["1","1","2","2","3","3"].</p><p>3. object<["1","2","3"]>:repeat(2) → ["1","1","2","2","3","3"].</p><p>4. object<{k1:"1"}>:repeat(2) → ["{\"k1\":\"1\"}","{\"k1\":\"1\"}"].</p>|
+||<p>***Types***:</p><p>- string → string\_slice.</p><p>- string\_slice → string\_slice.</p><p>- template\_search → string\_slice.</p><p>- object → string\_slice.</p>|
+|***join***|Connects the elements of the input value using a specific separator.|
+||<p>***Syntax***: join(@separator).</p><p>The "separator" is used to join the various elements into a *string* result. It is always converted to *string*.</p>|
+||<p>***Examples***:</p><p>1. ["1","2"]:join(",") → "1,2".</p><p>2. object<{k1:"1",k2:"2"}>:join(",") → "1,2".</p>|
+||<p>***Types***:</p><p>- string → string.</p><p>- string\_slice → string.</p><p>- object → string.</p>|
+|***split***|Splits the input into an *array* of *strings*.|
+||<p>***Syntax***: split(@separator).</p><p>The "separator" is used to separate the various elements into a *string* result. It is always converted to *string*.</p>|
+||<p>***Examples***:</p><p>1. "123":split("") → ["1","2","3"].</p><p>2. "12345":split("2") → ["1","345"].</p>|
+||<p>***Types***:</p><p>- string → string\_slice.</p>|
+|***count***|Returns the number of elements in the input value.|
+||***Syntax***: count().|
+||<p>***Examples***:</p><p>1. "321":count()→ "3".</p><p>2. ["4","3","2","1"]:count() → "4".</p><p>3. object<{k1:"1",k2:"2"}>:count() → "2".</p>|
+||<p>***Types***:</p><p>- string → string.</p><p>- string\_slice → string.</p><p>- template\_search → string.</p><p>- object → string.</p>|
+|***contains***|Returns whether the input value contains a given value/key.|
+||<p>***Syntax***: contains(@value).</p><p>The "value" is always converted to *string*.</p>|
+||<p>***Examples***:</p><p>1. "321":contains("2") → "true".</p><p>2. ["4","3","2","1"]:contains("5") → "false".</p><p>3. object<{k1:"1",k2:"2"}>:contains("k2") → "true".</p>|
+||<p>***Types***:</p><p>- string → string.</p><p>- string\_slice → string.</p><p>- template\_search → string.</p><p>- object → string.</p>|
+|***assert***|Interrupts the chain of operations if the condition is not met.|
+||<p>***Syntax***: assert((@input => @condition).</p><p>"input" refers to the identifier that references the input value.</p><p>"condition" will always be transformed into a boolean value.</p>|
+||<p>***Examples***:</p><p>1. "123":assert((v) => v - 1 == 122) → "123".</p><p>2. "123":assert((v) => v - 1 != 122) → "".</p>|
+||<p>***Types***:</p><p>- string → string | "".</p><p>- string\_slice → string\_slice | "".</p><p>- template\_search → template\_search | "".</p><p>- object → object | "".</p>|
+|***replace***|Replaces content of the input value, or part of it, with a new value.|
+||<p>***Syntax***: replace(@old_value, @new_value).</p><p>"old_value" refers to the value to be replaced by "new_value". Both parameters, "old_value" and "new_value", will always be converted to *string*.</p>|
+||<p>***Examples***:</p><p>1. "123":replace("2","5") → "153".</p><p>2. ["1","2","3"]:replace("1","5") → ["5","2","3"].</p><p>3. object<{k1:"1",k2:"2"}>:replace("k2","3") → object<{k1:"1",k2:"3"}>.</p><p>4. search<{result:"1|2",values:{k1:"1",k2:"2"}}>:remove("k1","3") → search<{result:"3|2",values:{k1:"3",k2:"2"}}>.</p>|
+||<p>***Types***:</p><p>- string → string.</p><p>- string\_slice → string\_slice.</p><p>- template\_search → template\_search.</p><p>- object → object.</p>|
+|***remove***|Removes part of the content from the input value.|
+||<p>***Syntax:*** remove(@value).</p><p>The "value" corresponds to the configuration that will be removed from the input value. It is always converted to *string*.</p>|
+||<p>***Examples***:</p><p>1. "123":remove("23") → "1".</p><p>2. ["1","2","3"]:remove("2") → ["1","3"].</p><p>3. object<{k1:"1",k2:"2"}>:remove("k2") → object<{k1:"1"}>.</p><p>4. search<{result:"1|2",values:{k1:"1",k2:"2"}}>:remove("k1") → search<{result:"|2",values:{k2:"2"}}>.</p>|
+||<p>***Types***:</p><p>- string → string.</p><p>- string\_slice → string\_slice.</p><p>- template\_search → template\_search.</p><p>- object → object.</p>|
+|***filter***|Filters elements of the input value according to a certain condition.|
+||<p>***Syntax:*** filter((@input <, @index>?) => @expression).</p><p>The "input" corresponds to the element of the input value.</p><p>The "index" is optional and corresponds to the numerical index of the iteration.</p><p>The "expression" consists of the expression that will be interpreted and depending on the result, the value will be added (or not) to the output value.</p>|
+||<p>***Examples***:</p><p>1. "147":filter((v)=>v%2!=0) → "17".</p><p>2. ["1","4","7"]:filter((v)=>v%2==0) → ["4"].</p><p>3. object<{k1:"1",k2:"2"}>:filter((v)=>v%2==0) → ["2"].</p><p>4. search<{result:"1|2",values:{k1:"1",k2:"2"}}>:filter((v)=>v!="2") → "1|".</p>|
+||<p>***Types***:</p><p>- string → string.</p><p>- string\_slice → string\_slice.</p><p>- template\_search → string.</p><p>- object → string\_slice.</p>|
+|***slice***|Alters the content of an input value by selecting the indicated range.|
+||<p>***Syntax:*** slice(@start <, @end>?).</p><p>The "start" and "end" correspond to the indices of the range that will correspond to the output value. These values must be numeric, with the "end" being optional, assuming the size of the input value by default.</p>|
+||<p>***Examples***:</p><p>1. "147":slice(1) → "47".</p><p>2. ["1","4","7"]:slice(0,1) → ["1"].</p><p>3. object<{k1:"1",k2:"2"}>:slice(1)  → ["2"].</p>|
+||<p>***Types***:</p><p>- string → string.</p><p>- string\_slice → string\_slice.</p><p>- template\_search → string.</p><p>- object → string\_slice.</p>|
+|***splice***|Alters the content of an input value by removing the indicated range.|
+||<p>***Syntax:*** splice(@start <, @end>?).</p><p>The "start" and "end" correspond to the indices of the range to be removed. These values must be numeric, with the "end" being optional, assuming the size of the input value by default.</p>|
+||<p>***Examples***:</p><p>1. "147":splice(1) → "1".</p><p>2. ["1","4","7"]:splice(0,1) → ["4","7"].</p><p>3. object<{k1:"1",k2:"2"}>:splice(1)  → ["1"].</p>|
+||<p>***Types***:</p><p>- string → string.</p><p>- string\_slice → string\_slice.</p><p>- template\_search → string.</p><p>- object → string\_slice.</p>|
+|***select***|Selects a sub-value from the template.|
+||<p>***Syntax:*** select(@ident) .</p><p>The "ident" corresponds to the identifier of the value in the template result. It is always converted to *string*.</p>|
+||<p>***Examples***:</p><p>1. search<{result:"1|2",values:{k1:"1",k2:"2"}}>:select("k1") → search<{result:"1",values:{}}> .</p>|
+||<p>***Types***:</p><p>- template\_search → template\_search.</p>|
+|***reverse***|Reverses the order of the input elements.|
+||***Syntax:*** reverse().|
+||<p>***Examples***:</p><p>1. ["1","2","3"]:reverse() → ["3","2","1"].</p><p>2. "123":reverse() → "321".</p>|
+||<p>***Types***:</p><p>- string → string.</p><p>- string\_slice → string\_slice.</p><p>- template\_search → string.</p><p>- object → object.</p>|
 
-#### **Palavras Reservadas (*Keywords*)**
-As *keywords* reservadas para as *static expressions* são as seguintes:
+#### **Reserved Words (*Keywords*)**
+The reserved *keywords* for *static expressions* are as follows:
 
-- this que contém as instruções associadas a um *join-point*.
-- func, call, args e returns que representam os dados de contexto fornecidos pelos vários *pointcuts*.
-- o caractere ; permite a junção de múltiplas *static expressions* numa só.
+- this, which contains the instructions associated with a *join-point*.
+- func, call, args, and returns, which represent the context data provided by various *pointcuts*.
+- the character ; allows the joining of multiple *static expressions* into one.
 
-**Nota:** A ferramenta possui algumas palavras reservadas, ou *keywords*, que têm uma finalidade específica e por isso não podem, ou não devem ser usadas como identificadores de variáveis e funções. A utilização das *keywords* variam de acordo com o tipo de expressão onde são utilizadas.
+**Note:** The tool has some reserved words, or *keywords*, that have a specific purpose and therefore should not, or must not be used as variable and function identifiers. The use of *keywords* varies according to the type of expression in which they are used.
 
-#### **Observações**
-Além da informação exposta neste capítulo, existem as seguintes observações a fazer relativamente às *static expressions*:
+#### **Observations**
+In addition to the information exposed in this chapter, the following observations should be made regarding *static expressions*:
 
-- Para além dos identificadores de contexto, é possível iniciar uma sequência de operações sobre um valor estático do tipo *string* (%""%).
-- Suportam modificadores numéricos (cálculos) dentro dos *lambda*.
-- As *keywords* para estas expressões não são as mesmas que para as *runtime expressions.*
-- O resultado final é sempre convertido para *string*.
-- Os comentários inline (iniciados através de ;;) devem possuir uma linha vazia extra para que sejam interpretados como tal. Caso contrário, o código escrito nessa linha é ignorado. Desta forma, o aconselhável é a utilização de blocos de comentários (entre (; e ;)).
+- Besides context identifiers, it is possible to start a sequence of operations on a static value of type *string* (%""%).
+- They support numeric modifiers (calculations) within *lambdas*.
+- The *keywords* for these expressions are not the same as for the *runtime expressions.*
+- The final result is always converted to *string*.
+- Inline comments (initiated by ;;) must have an extra blank line to be interpreted as such. Otherwise, the code written on that line is ignored. Therefore, it is advisable to use comment blocks (between (; and ;)).
 
 ### **Runtime Expressions**
-O objetivo principal destas expressões consiste na geração de código em *runtime*, ou seja, o código das transformações é sensível ao contexto em que se encontra a executar. Para além disto, também serão utilizadas para permitir a interação com valores cujo tipo é desconhecido pelo WASM (*strings*, mapas e *arrays*).
+The main goal of these expressions is to generate code at *runtime*, meaning the transformation code is context-sensitive in its execution. Additionally, they will also be used to interact with values whose type is unknown to WASM (*strings*, maps, and *arrays*).
 
-As *runtime expressions* estão fortemente acopladas com o JS, uma vez que todo o processo de execução vai ser realizado com recurso à função JS eval (MDN Contributors, 2021).
+*Runtime expressions* are closely coupled with JS, as the entire execution process will be carried out using the JS eval function (MDN Contributors, 2021).
 
-Com a utilização destas expressões não só será possível a utilização de novos tipos, conseguindo assim a implementação de algumas funcionalidades que utilizando WASM "puro" seriam impossíveis (ou quase impossíveis), tais como, *logging* ou *caching*, como também a capacidade de executar expressões complexas com os dados do contexto em tempo de execução.
+The use of these expressions not only allows for the implementation of new types, thereby enabling the implementation of some functionalities that would be impossible (or almost impossible) with pure WASM, such as *logging* or *caching*, but also the ability to execute complex expressions with context data at runtime.
 
-Apesar da utilização deste tipo de instruções possuir diversos benefícios, também existem algumas desvantagens que podem ser limitadoras para o utilizador. Uma das desvantagens é o facto do utilizador necessitar não só do código WASM gerado, mas também do código JS, sendo que a interação com o programa WASM deve ser feita com recurso a este último ficheiro, e não como o módulo WASM. Outra desvantagem é que o tamanho do ficheiro WASM aumenta consideravelmente de tamanho devido à geração de instruções necessárias à comunicação com o cliente. Por último, pode existir uma diminuição de desempenho no programa, uma vez que o programa não se resume apenas à utilização de instruções WASM.
+Despite the benefits of using this type of instruction, some disadvantages can be limiting for the user. One disadvantage is the need for not only the generated WASM code but also the JS code, with the interaction with the WASM program having to be done using this latter file, and not as the WASM module. Another disadvantage is that the size of the WASM file increases considerably due to the generation of instructions necessary for communication with the client. Lastly, there may be a decrease in program performance since the program is not limited to using WASM instructions.
 
-A utilização de *runtime expressions* possui algumas restrições. Estas restrições estão relacionadas com a instrução onde é invocada. Quando é invocada na "raiz" da função, assume o tipo do retorno da função. Se for invocada dentro das instruções call, local.set/tee e global.set, dependem do tipo do primeiro argumento da instrução, quer seja função no caso da call, quer seja uma variável no caso do local.set/tee e global.set. Por último, dá para incluir estas expressões dentro de instruções WASM onde é possível conhecer o tipo do valor esperado para o respetivo argumento onde a expressão é aplicada (por exemplo, para a instrução i32.add é possível obter os tipos de ambos os parâmetros - *i32*). Todas as restantes instruções não permitem a utilização deste tipo de expressões.
+The use of *runtime expressions* has some restrictions. These restrictions are related to the instruction where it is invoked. When invoked at the "root" of the function, it assumes the type of the function's return. If invoked within the call, local.set/tee, and global.set instructions, it depends on the type of the first argument of the instruction, whether it be a function in the case of call, or a variable in the case of local.set/tee and global.set. Lastly, these expressions can be included within WASM instructions where it is possible to know the expected value type for the respective argument where the expression is applied (for example, for the i32.add instruction, it is possible to obtain the types of both parameters - *i32*). All other instructions do not allow the use of this type of expressions.
 
-Com isto, é possível definir a seguinte sintaxe para as diversas formas de aplicação destas expressões:
+With this, the following syntax can be defined for the various ways these expressions can be applied:
 
-- @índice = valor do índice
-- @expressão = código JS + referências
-- @referência = nome da variável
-- @runtime\_expression = /@expressão/
-- @runtime\_reference = #@referência
-- @var\_ident = @índice | @runtime\_reference
-- @call = (call @índice @runtime\_expression)
-- @set\_local = (local.set @var\_ident @runtime\_expression)
-- @tee\_local = (local.tee @var\_ident @runtime\_expression)
-- @set\_global = (global.set @var\_ident @runtime\_expression)
-- As restantes instruções disponíveis não possuem qualquer formato predefinido, sendo que deve ser utilizada a sintaxe "runtime\_expression" no lugar das expressões.
+- @index = index value
+- @expression = JS code + references
+- @reference = variable name
+- @runtime_expression = /@expression/
+- @runtime_reference = #@reference
+- @var_ident = @index | @runtime_reference
+- @call = (call @index @runtime_expression)
+- @set_local = (local.set @var_ident @runtime_expression)
+- @tee_local = (local.tee @var_ident @runtime_expression)
+- @set_global = (global.set @var_ident @runtime_expression)
+- The remaining available instructions do not have any predefined format, and the "runtime_expression" syntax should be used instead of expressions.
 
 #### **Runtime References**
-As *runtime references* têm como objetivo referenciar uma dada variável no código para as operações *runtime*. Estas tanto podem ser usadas para identificar variáveis dentro das *runtime expressions*, como também para referenciar variáveis que serão alteradas através das instruções local.set/tee e global.set ou retornos de uma função.
+*Runtime references* aim to reference a given variable in the code for *runtime* operations. They can be used both to identify variables within *runtime expressions* and to reference variables that will be altered through local.set/tee and global.set instructions or function returns.
 
-No que toca ao primeiro caso, as referências vão permitir que a ferramenta consiga identificar quais as variáveis que devem ser substituídas pelo respetivo valor em tempo de compilação, e assim, proceder às respetivas alterações de código. No segundo caso, estas referências devem sempre ser combinadas com *runtime expressions*, uma vez que não só a interpretação dessas expressões é responsável por atribuir a referência correta à *runtime reference*, como também, as variáveis declaradas neste caso não são inspecionadas em tempo de compilação, e desta forma, não serão detetáveis no momento da execução. Como consequência, o valor pode não existir ou encontrar-se num estado obsoleto no momento em que a referência é executada (ver código abaixo). Para contornar o problema, é aconselhado que quando se necessita de uma variável neste tipo de referência, antes exista uma instrução que a utilize numa *runtime expression*. A utilização das referências só é obrigatória quando é feito o acesso a membros de variáveis do tipo mapa ou *array* (por exemplo, array[1] ou mapa["chave"]).
+In the first case, the references will allow the tool to identify which variables should be replaced by their respective value at compile time, and thus proceed with the respective code changes. In the second case, these references must always be combined with *runtime expressions*, as not only the interpretation of these expressions is responsible for assigning the correct reference to the *runtime reference*, but also, the variables declared in this case are not inspected at compile time, and therefore, will not be detectable at the time of execution. As a consequence, the value may not exist or be in an obsolete state when the reference is executed (see code below). To circumvent this problem, it is advisable that when a variable is needed in this type of reference, there should first be an instruction that uses it in a *runtime expression*. The use of references is only mandatory when accessing members of map or *array* type variables (for example, array[1] or map["key"]).
 
 ```
-(local.set #index /#index/) ;; A utilização duma instrução vai registar a variável index em tempo de compilação.
-(local.set #mapa[index] /#valor/) ;; e assim será possível usar na *runtime reference*.
+(local.set #index /#index/) ;; The use of an instruction will register the variable index at compile time.
+(local.set #map [#index] /#value/) ;; and thus it will be possible to use in the runtime reference.
 (...)
-(local.set #mapa[index] /#valor/) ;; Valor para a variável index pode encontrar-se obsoleto.
+(local.set #map [#index] /#value/) ;; Value for the variable index may be outdated.
 (...)
-(local.set #mapa[#index] /#valor/) ;; Erro! A referência *#index* está a ser utilizada com índice de outra *runtime reference* sem ser dentro de uma *runtime expression*.
+(local.set #map [#index] /#value/) ;; Error! The reference #index is being used as an index of another runtime reference without being inside a runtime expression.
 ```
 
-#### **Palavras Reservadas (*Keywords*)**
-As *keywords* definidas para as *runtime expressions* são todas as *keywords* existentes no JS, e para além disto, a *keyword* return\_, que representa internamente o valor de retorno de uma função com o tipo complexo.
+#### **Reserved Words (*Keywords*)**
+The *keywords* defined for the *runtime expressions* are all the *keywords* existing in JS, and in addition, the *keyword* return_, which internally represents the return value of a function with a complex type.
 
-**Nota:** A ferramenta possui algumas palavras reservadas, ou *keywords*, que têm uma finalidade específica e por isso não podem, ou não devem ser usadas como identificadores de variáveis e funções. A utilização das *keywords* variam de acordo com o tipo de expressão onde são utilizadas.
+**Note:** The tool has some reserved words, or *keywords*, that have a specific purpose and therefore should not, or must not be used as variable and function identifiers. The use of *keywords* varies according to the type of expression where they are used.
 
 ## **Template Expressions**
-As *template expressions* são utilizadas para definir o código dos *templates* que poderão ser utilizados na expressão do *pointcut*, para a realização de uma pesquisa por padrão. Durante o processo de pesquisa, as variáveis que vão sendo recolhidas são incluídas no contexto do *advice*, encapsuladas no identificador referente à chave (nome) do *template*. No final da pesquisa, este identificador é convertido num modelo interno do tipo search\_template, onde poderá ser acedido e manipulado com recurso às *static expressions* aplicadas no código de transformação da ferramenta.
+*Template expressions* are used to define the code of the *templates* that can be used in the *pointcut* expression, for pattern search. During the search process, the variables that are collected are included in the context of the *advice*, encapsulated in the identifier corresponding to the key (name) of the *template*. At the end of the search, this identifier is converted into an internal model of the type search_template, where it can be accessed and manipulated using the *static expressions* applied in the tool's transformation code.
 
-Os *templates* estão definidos no objeto *Template* do ficheiro de transformações, e são identificados através do valor da chave onde estão inseridos, isto é, o seu nome.
+The *templates* are defined in the Template object of the transformation file and are identified through the value of the key where they are inserted, that is, their name.
 ### **Template Keywords**
-Estas expressões são compostas por uma linguagem específica que combina o WAT com uma sintaxe semelhante às *static expressions*, as *template keywords*, mas cujo objetivo é muito distinto. Enquanto que as *static expressions* são interpretadas e convertidas para WAT, as *template keywords* servem como um *placeholder* no padrão que poderá ficar associado a uma dada variável.
+These expressions are composed of a specific language that combines WAT with syntax similar to *static expressions*, the *template keywords*, but whose purpose is very different. While *static expressions* are interpreted and converted to WAT, *template keywords* serve as a placeholder in the pattern that may be associated with a given variable.
 
-As *template keywords* são capazes de combinar *templates* uns com os outros.* Para isso, estas suportam a utilização de funções, que possuem uma sintaxe semelhante às funções de transformação das *static expressions*, e permitem que uma dada variável respeite uma dada restrição segundo outro *template*. Estas restrições não só englobam que as variáveis coincidam (ou não) com o padrão definido no *template* integrado, como também, declaram variáveis que devem ser definidas nesse *template*.
+*Template keywords* are capable of combining *templates* with each other.* For this, they support the use of functions, which have a syntax similar to the transformation functions of the *static expressions*, and allow a given variable to respect a given restriction according to another *template*. These restrictions not only include that the variables match (or not) the pattern defined in the integrated *template*, but also declare variables that must be defined in that *template*.
 
-Na seguinte tabela encontram-se representadas as várias funções disponíveis na ferramenta. Para cada função é feita uma breve descrição e apresentada a devida sintaxe. Na sintaxe, o “template" corresponde ao nome do template a integrar, e o "var\_ident" corresponde ao identificador que deve estar definido no template a integrar.
+The following table shows the various functions available in the tool. For each function, a brief description is given and the proper syntax is presented. In the syntax, the "template" corresponds to the name of the template to be integrated, and the "var_ident" corresponds to the identifier that must be defined in the template to be integrated.
 
-|***Função***|***Descrição***|***Sintaxe***|
+|***Function***|***Description***|***Syntax***|
 | - | - | - |
-|***include***|O valor do identificador deve coincidir com o template indicado.|include(@template)|
-|***include\_one***|O valor do identificador deve coincidir com pelo menos um dos templates indicados.|include\_one(@template <, @template>\*)|
-|***include\_all***|O valor do identificador deve coincidir com todos os templates indicados.|include\_all(@template <, @template>\*)|
-|***not\_include***|O valor do identificador não pode coincidir com o template indicado.|not\_include(@template)|
-|***not\_include\_one***|O valor do identificador não pode coincidir com nenhum dos templates indicados.|not\_include\_one(@template <, @template>\*)|
-|***not\_include\_all***|O valor do identificador não pode coincidir com todos os templates indicados. Ou seja, só não é válido se coincidir com todos os templates.|not\_include\_all(@template <, @template>\*)|
-|***define***|O *template* a integrar deve obrigatoriamente definir os identificadores indicados. Desta forma, a função *define* só é permitida quando é procedida pelas funções *include*, *include\_one* e *include\_all*.|define(@var\_ident)|
+|***include***|The value of the identifier must match the indicated template.|include(@template)|
+|***include_one***|The value of the identifier must match at least one of the indicated templates.|include_one(@template <, @template>*)|
+|***include_all***|The value of the identifier must match all the indicated templates.|include_all(@template <, @template>*)|
+|***not_include***|The value of the identifier cannot match the indicated template.|not_include(@template)|
+|***not_include_one***|The value of the identifier cannot match any of the indicated templates.|not_include_one(@template <, @template>*)|
+|***not_include_all***|The value of the identifier cannot match all the indicated templates. That is, it is only invalid if it matches all the templates.|not_include_all(@template <, @template>*)|
+|***define***|The *template* to be integrated must necessarily define the indicated identifiers. Therefore, the *define* function is only allowed when preceded by the *include*, *include_one*, and *include_all* functions.|define(@var_ident)|
 
-### **Funcionamento**
-A aplicação dos *templates* é feita com recurso ao Comby (Comby, 2021). Na preparação da *query* as *template keywords* são sempre substituídas por um "*Named Match*", permitindo assim que a ferramenta associe uma dada *keyword* à variável correspondente. Os resultados obtidos são interpretados pela ferramenta e armazenados numa estrutura central recursiva, existindo a possibilidade de serem executados mais do que um *template* de acordo com a definição do utilizador. Esta estrutura contém a respetiva iteração com o valor encontrado e os valores das variáveis que compõem essa iteração. A ferramenta utiliza apenas as primeiras iterações encontradas, ou seja, caso sejam encontradas várias correspondências para a mesma *query*, apenas a primeira será utilizada. Esta limitação foi estabelecida com o intuito de simplificar a utilização dos *templates* para o utilizador, uma vez que, após a transformação do código associado à primeira iteração, o código associado às restantes iterações encontrar-se-ia desatualizado, e como consequência, iria ocorrer um erro de execução, ou no pior cenário, o resultado obtido com as transformações seria enganador ou sem sentido para o utilizador. Contudo, é fornecida uma forma de contornar esta limitação que passa pela utilização de vários *advices* com a mesma definição. O único desafio desta abordagem seria conhecer o número de *advices* que é necessário executar, no entanto, o utilizador pode sempre executar a ferramenta até que não existam novas alterações, e assim, garantir que todas as iterações são devidamente transformadas.
+### **Operation**
+The application of *templates* is done using Comby (Comby, 2021). In preparing the *query*, the *template keywords* are always replaced by a "*Named Match*," allowing the tool to associate a given *keyword* with the corresponding variable. The results obtained are interpreted by the tool and stored in a central recursive structure, with the possibility of executing more than one *template* according to the user's definition. This structure contains the respective iteration with the found value and the values of the variables that make up this iteration. The tool only uses the first iterations found, meaning if multiple matches are found for the same *query*, only the first will be used. This limitation was established to simplify the use of *templates* for the user, as after transforming the code associated with the first iteration, the code associated with the remaining iterations would be outdated, and as a consequence, an execution error might occur, or in the worst scenario, the result obtained with the transformations would be misleading or meaningless to the user. However, a way to circumvent this limitation is provided, which involves using several *advices* with the same definition. The only challenge of this approach would be knowing the number of *advices* that need to be executed, but the user can always run the tool until no new changes are found, thus ensuring that all iterations are properly transformed.
 
-## **Modo Inteligente (Smart)**
-Este modo inteligente é configurado para cada um dos *advices* declarados no ficheiro de transformações, e define o modo como as transformações irão operar. Caso este modo esteja ativo, a transformação tem em conta o valor de retorno das instruções referentes ao *join-point* em questão, e procede às transformações extras que permitem manter o mesmo valor de retorno.
+## **Smart Mode**
+This smart mode is configured for each of the *advices* declared in the transformation file and defines how the transformations will operate. If this mode is active, the transformation takes into account the return value of the instructions related to the *join-point* in question, and proceeds with extra transformations that maintain the same return value.
 
-Neste modo o utilizador pode definir uma instrução target no código do *advice* que será a instrução que servirá de retorno para o código que está a ser modificado. Caso não seja definido nenhum target, a ferramenta faz uma pesquisa pela instrução que anteriormente existia. Se for encontrada, a ferramenta assume a instrução como sendo o target, mas se essa instrução não existir no novo código, não é realizada qualquer transformação inteligente.
+In this mode, the user can define a target instruction in the *advice* code, which will be the instruction that serves as the return for the code being modified. If no target is defined, the tool searches for the instruction that previously existed. If found, the tool assumes the instruction as the target, but if this instruction does not exist in the new code, no intelligent transformation is performed.
 
-Para perceber melhor o conceito, a seguir será apresentado um exemplo conceptual. Neste exemplo, as instruções que se encontram a ser modificadas são ambas as chamadas existentes na instrução de adição. Esta modificação está relacionada com a instrumentação de código, sendo que deve ser adicionada uma função antes e depois de qualquer chamada realizada no código.
+To better understand the concept, a conceptual example will be presented next. In this example, the instructions being modified are both calls existing in the addition instruction. This modification is related to code instrumentation, where a function must be added before and after any call made in the code.
 
-* Código WAT original para o modo "inteligente"
+* Original WAT code for "smart" mode
 ```
-(i32.add (call $f0) (call $f1))
-```
-
-* *Pointcut expression* para transformação no modo "inteligente"
-```
-() => call(\* \*(..))
+(i32.add (call $f0) (call $f1))
 ```
 
-* Código do *advice* para a transformação no modo "inteligente"
+* *Pointcut expression* for transformation in "smart" mode
 ```
-(call $before (i32.const %call.Caller.Order%))
-(target %this%)
-(call $after (i32.const %call.Caller.Order%))
+() => call(* *(..))
 ```
 
-* Código WAT resultante sem o modo "inteligente" ativo
+* *Advice* code for the transformation in "smart" mode
+```
+(call $before (i32.const %call.Caller.Order%))
+(target %this%)
+(call $after (i32.const %call.Caller.Order%))
+```
+
+* Resulting WAT code without "smart" mode active
 ```
 (i32.add
-  (call $before 0) (call $f0) (call $after 0)
-  (call $before 1) (call $f1) (call $after 1)
-) ;; Instrução incorreta
+(call $before 0) (call $f0) (call $after 0)
+(call $before 1) (call $f1) (call $after 1)
+) ;; Incorrect Instruction
 ```
 
-* Código WAT resultante com o modo "inteligente" ativo
+* Resulting WAT code with "smart" mode active
 ```
-(call $before 0) (local.set $tmp0 (call $f0)) (call $after 0)
-(call $before 1) (local.set $tmp1 (call $f1)) (call $after 1)
+(call $before 0) (local.set $tmp0 (call $f0)) (call $after 0)
+(call $before 1) (local.set $tmp1 (call $f1)) (call $after 1)
 (i32.add
-  (local.get $tmp0)
-  (local.get $tmp1)
-)  ;; Instrução correta
+(local.get $tmp0)
+(local.get $tmp1)
+) ;; Correct Instruction
 ```
