@@ -23,8 +23,6 @@ go build -o wmr
 ```
 
 ## Usage
-
-## Usage
 To use WasmManipulator, you can either set environment variables or pass parameters directly when executing the tool. Below is an example command:
 
 ```bash
